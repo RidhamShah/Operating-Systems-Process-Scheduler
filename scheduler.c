@@ -6,23 +6,23 @@ typedef enum {false, true} bool;        // Allows boolean types in C
 
 /* Defines a job struct */
 struct Process {
-    uint32_t A;                         // A: Arrival time of the process
-    uint32_t B;                         // B: Upper Bound of CPU burst times of the given random integer list
-    uint32_t C;                         // C: Total CPU time required
-    uint32_t M;                         // M: Multiplier of CPU burst time
-    uint32_t processID;                 // The process ID given upon input read
+    u_int32_t A;                         // A: Arrival time of the process
+    u_int32_t B;                         // B: Upper Bound of CPU burst times of the given random integer list
+    u_int32_t C;                         // C: Total CPU time required
+    u_int32_t M;                         // M: Multiplier of CPU burst time
+    u_int32_t processID;                 // The process ID given upon input read
 
-    uint8_t status;                     // 0 is unstarted, 1 is ready, 2 is running, 3 is blocked, 4 is terminated
+    u_int8_t status;                     // 0 is unstarted, 1 is ready, 2 is running, 3 is blocked, 4 is terminated
 
     int32_t finishingTime;              // The cycle when the the process finishes (initially -1)
-    uint32_t currentCPUTimeRun;         // The amount of time the process has already run (time in running state)
-    uint32_t currentIOBlockedTime;      // The amount of time the process has been IO blocked (time in blocked state)
-    uint32_t currentWaitingTime;        // The amount of time spent waiting to be run (time in ready state)
+    u_int32_t currentCPUTimeRun;         // The amount of time the process has already run (time in running state)
+    u_int32_t currentIOBlockedTime;      // The amount of time the process has been IO blocked (time in blocked state)
+    u_int32_t currentWaitingTime;        // The amount of time spent waiting to be run (time in ready state)
 
-    uint32_t IOBurst;                   // The amount of time until the process finishes being blocked
-    uint32_t CPUBurst;                  // The CPU availability of the process (has to be > 1 to move to running)
+    u_int32_t IOBurst;                   // The amount of time until the process finishes being blocked
+    u_int32_t CPUBurst;                  // The CPU availability of the process (has to be > 1 to move to running)
 
-    int32_t quantum;                    // Used for schedulers that utilise pre-emption
+    int32_t quantum;                    // Used for schedulers that utilise pre-emption {agri vastu}
 
     bool isFirstTimeRunning;            // Used to check when to calculate the CPU burst when it hits running mode
 
@@ -38,11 +38,11 @@ bool IS_RANDOM_MODE = false;            // Flags whether the output should inclu
 bool IS_FIRST_TIME_RUNNING_UNIPROGRAMMED = true;
 struct Process* UNIPROGRAMMED_PROCESS = NULL;
 
-uint32_t CURRENT_CYCLE = 0;             // The current cycle that each process is on
-uint32_t TOTAL_CREATED_PROCESSES = 0;   // The total number of processes constructed
-uint32_t TOTAL_STARTED_PROCESSES = 0;   // The total number of processes that have started being simulated
-uint32_t TOTAL_FINISHED_PROCESSES = 0;  // The total number of processes that have finished running
-uint32_t TOTAL_NUMBER_OF_CYCLES_SPENT_BLOCKED = 0;
+u_int32_t CURRENT_CYCLE = 0;             // The current cycle that each process is on
+u_int32_t TOTAL_CREATED_PROCESSES = 0;   // The total number of processes constructed
+u_int32_t TOTAL_STARTED_PROCESSES = 0;   // The total number of processes that have started being simulated
+u_int32_t TOTAL_FINISHED_PROCESSES = 0;  // The total number of processes that have finished running
+u_int32_t TOTAL_NUMBER_OF_CYCLES_SPENT_BLOCKED = 0;
 
 const char* RANDOM_NUMBER_FILE_NAME= "random-numbers";
 
@@ -50,17 +50,17 @@ const char* RANDOM_NUMBER_FILE_NAME= "random-numbers";
 // readyQueue head & tail pointers
 struct Process* readyHead = NULL;
 struct Process* readyTail = NULL;
-uint32_t readyProcessQueueSize = 0;
+u_int32_t readyProcessQueueSize = 0;
 
 // readySuspendedQueue head & tail pointers
 struct Process* readySuspendedHead = NULL;
 struct Process* readySuspendedTail = NULL;
-uint32_t readySuspendedProcessQueueSize = 0;
+u_int32_t readySuspendedProcessQueueSize = 0;
 
 // blockedList head & tail pointers
 struct Process* blockedHead = NULL;
 struct Process* blockedTail = NULL;
-uint32_t blockedProcessListSize = 0;
+u_int32_t blockedProcessListSize = 0;
 
 // finished processes pointer
 struct Process* CURRENT_RUNNING_PROCESS = NULL;
@@ -70,11 +70,12 @@ struct Process* CURRENT_RUNNING_PROCESS = NULL;
  * NOTE: Only works if the integer values in random-number are less than 20 in length
  * @return The CPUBurst, calculated with the function: 1 + (randomNumberFromFile % UpperBound)
  */
-uint32_t randomOS(uint32_t upperBound, FILE* randomNumberFile)
+u_int32_t randomOS(u_int32_t upperBound, FILE* randomNumberFile)
 {
     char str[20];
-    uint32_t unsignedRandomInteger = (uint32_t) atoi(fgets(str, 20, randomNumberFile));
-    uint32_t returnValue = 1 + (unsignedRandomInteger % upperBound);
+    u_int32_t unsignedRandomInteger = (u_int32_t) atoi(fgets(str, 20, randomNumberFile)); // take random no in order of file
+    u_int32_t returnValue = 1 + (unsignedRandomInteger % upperBound);
+    //printf("--------debug-------%i\n",unsignedRandomInteger);
     return returnValue;
 } // End of the randomOS function
 
@@ -263,11 +264,11 @@ void doBlockedProcesses()
                     struct Process* unBlockedProcess = dequeueBlockedProcess();
                     enqueueReadyProcess(unBlockedProcess);
                 }
-                else if (currentNode->processID == blockedTail->processID)
+                else if (currentNode->processID == blockedTail->processID) 
                 {
                     // Removes from the back
                     struct Process* currentBlockedIterationProcess = blockedHead;
-                    while (currentBlockedIterationProcess->nextInBlockedList->nextInBlockedList != NULL)
+                    while (currentBlockedIterationProcess->nextInBlockedList->nextInBlockedList != NULL) //head.next.next
                     {currentBlockedIterationProcess = currentBlockedIterationProcess->nextInBlockedList;}
 
                     blockedTail = currentBlockedIterationProcess;
@@ -307,7 +308,7 @@ void doBlockedProcesses()
  * @param finishedProcessContainer The terminated processes, in array form, and in the order they each finished in.
  * @param schedulerAlgorithm Which scheduler algorithm this function should run. 0 = FCFS, 1 = RR, 2 = UNI, 3 = SJF.
  */
-void doRunningProcesses(struct Process finishedProcessContainer[], uint8_t schedulerAlgorithm)
+void doRunningProcesses(struct Process finishedProcessContainer[], u_int8_t schedulerAlgorithm)
 {
     if (CURRENT_RUNNING_PROCESS != NULL)
     {
@@ -359,7 +360,7 @@ void doRunningProcesses(struct Process finishedProcessContainer[], uint8_t sched
  */
 void createProcesses(struct Process processContainer[])
 {
-    uint32_t i = 0;
+    u_int32_t i = 0;
     for (; i < TOTAL_CREATED_PROCESSES; ++i)
     {
         if (processContainer[i].A == CURRENT_CYCLE)
@@ -383,14 +384,14 @@ void createProcesses(struct Process processContainer[])
  * @param currentPassNumber The current pass this simulation is run (either pass 1 or 2 for each algorithm)
  * @param randomFile The file to retrieve a "random" number to be used in calculating CPU Burst
  */
-void doReadyProcesses(uint8_t schedulerAlgorithm, uint8_t currentPassNumber, FILE* randomFile)
+void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, FILE* randomFile)
 {
     // Suspends anything that isn't the UNIPROGRAMMED process
     if ((UNIPROGRAMMED_PROCESS != NULL) && (readyProcessQueueSize != 0)
         && (readyHead != UNIPROGRAMMED_PROCESS) && (schedulerAlgorithm == 2))
     {
         // There is a process running, so suspends anything to the ready suspended queue
-        uint32_t i = 0;
+        u_int32_t i = 0;
         for (; i < readyProcessQueueSize; ++i)
         {
             struct Process* suspendedNode = dequeueReadyProcess();
@@ -420,10 +421,10 @@ void doReadyProcesses(uint8_t schedulerAlgorithm, uint8_t currentPassNumber, FIL
             if (schedulerAlgorithm == 3)
             {
                 // Scheduler is shortest job first, meaning in lowest remaining CPU time required
-                uint32_t i = 0;
+                u_int32_t i = 0;
                 struct Process* currentReadyProcess = readyHead;
                 struct Process* shortestJobProcess = readyHead;
-                for (; i < readyProcessQueueSize; ++i)
+                for (; i < readyProcessQueueSize; ++i) // minimum sodhe che ---> mn = min(mn,i-j);
                 {
                     if ((shortestJobProcess->C - shortestJobProcess->currentCPUTimeRun) >
                             (currentReadyProcess->C - currentReadyProcess->currentCPUTimeRun))
@@ -478,18 +479,256 @@ void doReadyProcesses(uint8_t schedulerAlgorithm, uint8_t currentPassNumber, FIL
                 readiedProcess->isFirstTimeRunning = true;
 
                 char str[20];
-                uint32_t unsignedRandomInteger = (uint32_t) atoi(fgets(str, 20, randomFile));
+                u_int32_t unsignedRandomInteger = (u_int32_t) atoi(fgets(str, 20, randomFile));
                 // Prints out the random number, assuming the random flag is passed in
                 if ((IS_RANDOM_MODE) && (currentPassNumber % 2 == 0))
                     printf("Find burst when choosing ready process to run %i\n", unsignedRandomInteger);
 
-                uint32_t newCPUBurst = 1 + (unsignedRandomInteger % shortestJobProcess->B);
+                u_int32_t newCPUBurst = 1 + (unsignedRandomInteger % shortestJobProcess->B);
                 // Checks if the new CPU Burst time is greater than the time remaining
-                if (newCPUBurst > (readiedProcess->C - readiedProcess->currentCPUTimeRun))
+                if (newCPUBurst > (readiedProcess->C - readiedProcess->currentCPUTimeRun))  
                     newCPUBurst = readiedProcess->C - readiedProcess->currentCPUTimeRun;
                 readiedProcess->CPUBurst = newCPUBurst;
                 CURRENT_RUNNING_PROCESS = readiedProcess;
             } // End of dealing with shortest job first
+            else if( schedulerAlgorithm == 4 )
+            {
+                // Scheduler is shortest job first, meaning in lowest remaining CPU time required
+                u_int32_t i = 0;
+                struct Process* currentReadyProcess = readyHead;
+                struct Process* shortestJobProcess = readyHead;
+                for (; i < readyProcessQueueSize; ++i) // minimum sodhe che ---> mn = min(mn,i-j);
+                {
+                    if ((shortestJobProcess->C - shortestJobProcess->currentCPUTimeRun) <
+                            (currentReadyProcess->C - currentReadyProcess->currentCPUTimeRun))
+                    {
+                        // Old shortest job is greater than the new one, sets the shortest job to point to the new one
+                        shortestJobProcess = currentReadyProcess;
+                    }
+                    currentReadyProcess = currentReadyProcess->nextInReadyQueue;
+                }// End of iterating through to find the shortest time remaining
+
+                // Needs to deal with removing the shortest job from the ready list (from front, back, and middle)
+                struct Process* readiedProcess;
+
+                if (readyHead->processID == shortestJobProcess->processID)
+                {
+                    // Dequeueing from the head of ready (normal dequeue)
+                    readiedProcess = dequeueReadyProcess();
+                }
+                else if (readyTail->processID == shortestJobProcess->processID)
+                {
+                    // Dequeues from the tail of ready list
+                    struct Process* currentReadyIterationProcess = readyHead;
+                    while (currentReadyIterationProcess->nextInReadyQueue->nextInReadyQueue != NULL)
+                    {currentReadyIterationProcess = currentReadyIterationProcess->nextInReadyQueue;}
+
+                    readyTail = currentReadyIterationProcess;
+
+                    readiedProcess = currentReadyIterationProcess->nextInReadyQueue;
+                    currentReadyIterationProcess->nextInReadyQueue = NULL;
+                    readiedProcess->nextInReadyQueue = NULL;
+                    --readyProcessQueueSize;
+                }
+                else
+                {
+                    // Dequeues from the middle of ready list
+                    struct Process* currentReadyIterationProcess = readyHead;
+
+                    // Iterates until right before the middle block
+                    while (currentReadyIterationProcess->nextInReadyQueue->processID != shortestJobProcess->processID)
+                    {currentReadyIterationProcess = currentReadyIterationProcess->nextInReadyQueue;}
+
+                    readiedProcess = currentReadyIterationProcess->nextInReadyQueue;
+
+                    currentReadyIterationProcess->nextInReadyQueue =
+                            currentReadyIterationProcess->nextInReadyQueue->nextInReadyQueue;
+                    readiedProcess->nextInReadyQueue = NULL;
+                    --readyProcessQueueSize;
+                }
+
+                // At this point, we have the shortest job process that should be sent, so sets it running
+                readiedProcess->status = 2;
+                readiedProcess->isFirstTimeRunning = true;
+
+                char str[20];
+                u_int32_t unsignedRandomInteger = (u_int32_t) atoi(fgets(str, 20, randomFile));
+                // Prints out the random number, assuming the random flag is passed in
+                if ((IS_RANDOM_MODE) && (currentPassNumber % 2 == 0))
+                    printf("Find burst when choosing ready process to run %i\n", unsignedRandomInteger);
+
+                u_int32_t newCPUBurst = 1 + (unsignedRandomInteger % shortestJobProcess->B);
+                // Checks if the new CPU Burst time is greater than the time remaining
+                if (newCPUBurst > (readiedProcess->C - readiedProcess->currentCPUTimeRun))  
+                    newCPUBurst = readiedProcess->C - readiedProcess->currentCPUTimeRun;
+                readiedProcess->CPUBurst = newCPUBurst;
+                CURRENT_RUNNING_PROCESS = readiedProcess;
+            }//::
+            else if( schedulerAlgorithm == 5 )
+            {
+                // HRRN (w / s + 1) 
+                u_int32_t i = 0;
+                struct Process* currentReadyProcess = readyHead;
+                struct Process* shortestJobProcess = readyHead;
+                // PRINT CURRENTREADYPROCESS DETAILS
+                
+                double ans;
+                for (; i < readyProcessQueueSize; ++i) // minimum sodhe che ---> mn = max(mn,i-j);
+                {
+                    double w1 = (1.0 * (shortestJobProcess->currentWaitingTime))/(shortestJobProcess->C - shortestJobProcess->currentCPUTimeRun); //temp w/s
+                    double w2 = (1.0 * (currentReadyProcess->currentWaitingTime))/(currentReadyProcess->C - currentReadyProcess->currentCPUTimeRun);
+                    printf("::::\nThese are the 'W / S' %f with PID = %i\n",w2,currentReadyProcess->processID);   
+                    if ((w1) < (w2))
+                    {
+                        // Old shortest job is greater than the new one, sets the shortest job to point to the new one
+                        ans=w2;
+                        shortestJobProcess = currentReadyProcess;
+                    }
+                    currentReadyProcess = currentReadyProcess->nextInReadyQueue;
+                }
+                // End of iterating through to find the shortest time remaining
+                //printf("::%i::%f::\n",shortestJobProcess->processID,ans);
+                // Needs to deal with removing the shortest job from the ready list (from front, back, and middle)
+                struct Process* readiedProcess;
+
+                if (readyHead->processID == shortestJobProcess->processID)
+                {
+                    // Dequeueing from the head of ready (normal dequeue)
+                    readiedProcess = dequeueReadyProcess();
+                }
+                else if (readyTail->processID == shortestJobProcess->processID)
+                {
+                    // Dequeues from the tail of ready list
+                    struct Process* currentReadyIterationProcess = readyHead;
+                    while (currentReadyIterationProcess->nextInReadyQueue->nextInReadyQueue != NULL)
+                    {currentReadyIterationProcess = currentReadyIterationProcess->nextInReadyQueue;}
+
+                    readyTail = currentReadyIterationProcess;
+
+                    readiedProcess = currentReadyIterationProcess->nextInReadyQueue;
+                    currentReadyIterationProcess->nextInReadyQueue = NULL;
+                    readiedProcess->nextInReadyQueue = NULL;
+                    --readyProcessQueueSize;
+                }
+                else
+                {
+                    // Dequeues from the middle of ready list
+                    struct Process* currentReadyIterationProcess = readyHead;
+
+                    // Iterates until right before the middle block
+                    while (currentReadyIterationProcess->nextInReadyQueue->processID != shortestJobProcess->processID)
+                    {currentReadyIterationProcess = currentReadyIterationProcess->nextInReadyQueue;}
+
+                    readiedProcess = currentReadyIterationProcess->nextInReadyQueue;
+
+                    currentReadyIterationProcess->nextInReadyQueue =
+                            currentReadyIterationProcess->nextInReadyQueue->nextInReadyQueue;
+                    readiedProcess->nextInReadyQueue = NULL;
+                    --readyProcessQueueSize;
+                }
+
+                // At this point, we have the shortest job process that should be sent, so sets it running
+                readiedProcess->status = 2;
+                readiedProcess->isFirstTimeRunning = true;
+
+                char str[20];
+                u_int32_t unsignedRandomInteger = (u_int32_t) atoi(fgets(str, 20, randomFile));
+                // Prints out the random number, assuming the random flag is passed in
+                if ((IS_RANDOM_MODE) && (currentPassNumber % 2 == 0))
+                    printf("Find burst when choosing ready process to run %i\n", unsignedRandomInteger);
+
+                u_int32_t newCPUBurst = 1 + (unsignedRandomInteger % shortestJobProcess->B);
+                // Checks if the new CPU Burst time is greater than the time remaining
+                if (newCPUBurst > (readiedProcess->C - readiedProcess->currentCPUTimeRun))  
+                    newCPUBurst = readiedProcess->C - readiedProcess->currentCPUTimeRun;
+                readiedProcess->CPUBurst = newCPUBurst;
+                CURRENT_RUNNING_PROCESS = readiedProcess;
+            }
+            else if( schedulerAlgorithm == 6 )
+            {
+                //srtn
+                u_int32_t i = 0;
+                struct Process* currentReadyProcess = readyHead;
+                struct Process* shortestJobProcess = readyHead;
+                for (; i < readyProcessQueueSize; ++i) // minimum sodhe che ---> mn = min(mn,i-j);
+                {
+                    if ((shortestJobProcess->C - shortestJobProcess->currentCPUTimeRun) <
+                            (currentReadyProcess->C - currentReadyProcess->currentCPUTimeRun))
+                    {
+                        // Old shortest job is greater than the new one, sets the shortest job to point to the new one
+                        shortestJobProcess = currentReadyProcess;
+                    }
+                    currentReadyProcess = currentReadyProcess->nextInReadyQueue;
+                }// End of iterating through to find the shortest time remaining
+
+                // Needs to deal with removing the shortest job from the ready list (from front, back, and middle)
+                struct Process* readiedProcess;
+
+                if (readyHead->processID == shortestJobProcess->processID)
+                {
+                    // Dequeueing from the head of ready (normal dequeue)
+                    readiedProcess = dequeueReadyProcess();
+                }
+                else if (readyTail->processID == shortestJobProcess->processID)
+                {
+                    // Dequeues from the tail of ready list
+                    struct Process* currentReadyIterationProcess = readyHead;
+                    while (currentReadyIterationProcess->nextInReadyQueue->nextInReadyQueue != NULL)
+                    {currentReadyIterationProcess = currentReadyIterationProcess->nextInReadyQueue;}
+
+                    readyTail = currentReadyIterationProcess;
+
+                    readiedProcess = currentReadyIterationProcess->nextInReadyQueue;
+                    currentReadyIterationProcess->nextInReadyQueue = NULL;
+                    readiedProcess->nextInReadyQueue = NULL;
+                    --readyProcessQueueSize;
+                }
+                else
+                {
+                    // Dequeues from the middle of ready list
+                    struct Process* currentReadyIterationProcess = readyHead;
+
+                    // Iterates until right before the middle block
+                    while (currentReadyIterationProcess->nextInReadyQueue->processID != shortestJobProcess->processID)
+                    {currentReadyIterationProcess = currentReadyIterationProcess->nextInReadyQueue;}
+
+                    readiedProcess = currentReadyIterationProcess->nextInReadyQueue;
+
+                    currentReadyIterationProcess->nextInReadyQueue =
+                            currentReadyIterationProcess->nextInReadyQueue->nextInReadyQueue;
+                    readiedProcess->nextInReadyQueue = NULL;
+                    --readyProcessQueueSize;
+                }
+
+                // At this point, we have the shortest job process that should be sent, so sets it running
+                char str[20];
+                u_int32_t unsignedRandomInteger = (u_int32_t) atoi(fgets(str, 20, randomFile));
+                // Prints out the random number, assuming the random flag is passed in
+                if ((IS_RANDOM_MODE) && (currentPassNumber % 2 == 0))
+                    printf("Find burst when choosing ready process to run %i\n", unsignedRandomInteger);
+
+                u_int32_t newCPUBurst = 1 + (unsignedRandomInteger % shortestJobProcess->B);
+                // Checks if the new CPU Burst time is greater than the time remaining
+                if (newCPUBurst > (readiedProcess->C - readiedProcess->currentCPUTimeRun))  
+                    newCPUBurst = readiedProcess->C - readiedProcess->currentCPUTimeRun;
+                readiedProcess->CPUBurst = newCPUBurst;
+                if (readiedProcess->CPUBurst > 0)
+                {
+                    // There are no running processes, and the CPU Burst is positive, so sets the process to run
+                    readiedProcess->status = 2;
+                    readiedProcess->isFirstTimeRunning = true;
+
+                    if (schedulerAlgorithm == 6)
+                    {
+                        // Scheduler is round robin, sets the quantum
+                        readiedProcess->quantum = 2;
+                    }
+                    CURRENT_RUNNING_PROCESS = readiedProcess;
+                }
+
+                
+               // CURRENT_RUNNING_PROCESS = readiedProcess;
+            }
             else
             {
                 // Is running one of the other schedulers, with no process currently running
@@ -497,12 +736,12 @@ void doReadyProcesses(uint8_t schedulerAlgorithm, uint8_t currentPassNumber, FIL
 
                 // Calculates CPU Burst stuff
                 char str[20];
-                uint32_t unsignedRandomInteger = (uint32_t) atoi(fgets(str, 20, randomFile));
+                u_int32_t unsignedRandomInteger = (u_int32_t) atoi(fgets(str, 20, randomFile));
                 // Prints out the random number, assuming the random flag is passed in
                 if ((IS_RANDOM_MODE) && (currentPassNumber % 2 == 0))
                     printf("Find burst when choosing ready process to run %i\n", unsignedRandomInteger);
 
-                uint32_t newCPUBurst = 1 + (unsignedRandomInteger % readiedNode->B);
+                u_int32_t newCPUBurst = 1 + (unsignedRandomInteger % readiedNode->B);
                 // Checks if the new CPU Burst time is greater than the time remaining
                 if (newCPUBurst > (readiedNode->C - readiedNode->currentCPUTimeRun))
                     newCPUBurst = readiedNode->C - readiedNode->currentCPUTimeRun;
@@ -530,7 +769,7 @@ void doReadyProcesses(uint8_t schedulerAlgorithm, uint8_t currentPassNumber, FIL
     if ((schedulerAlgorithm == 2) && (readyProcessQueueSize != 0))
     {
         // Things are still in the ready queue
-        uint32_t i = 0;
+        u_int32_t i = 0;
         for (; i < readyProcessQueueSize; ++i)
         {
             if (CURRENT_RUNNING_PROCESS != NULL)
@@ -549,10 +788,10 @@ void doReadyProcesses(uint8_t schedulerAlgorithm, uint8_t currentPassNumber, FIL
  * @param processContainer The original processes inputted, in array form
  * @param schedulerAlgorithm Which scheduler algorithm this function should run. 0 = FCFS, 1 = RR, 2 = UNI, 3 = SJF.
  */
-void incrementTimers(struct Process processContainer[], uint8_t schedulerAlgorithm)
+void incrementTimers(struct Process processContainer[], u_int8_t schedulerAlgorithm)
 {
     // Iterates through all processes, and alters any timers that need changing (decrementing CPUBurst if running, etc)
-    uint32_t i = 0;
+    u_int32_t i = 0;
     for (; i < TOTAL_CREATED_PROCESSES; ++i)
     {
         switch (processContainer[i].status)
@@ -608,7 +847,7 @@ void incrementTimers(struct Process processContainer[], uint8_t schedulerAlgorit
  * @param argc The number of arguments in argv, where each argument is space deliminated
  * @param argv The command used to run the program, with each argument space deliminated
  */
-uint8_t setFlags(int32_t argc, char *argv[])
+u_int8_t setFlags(int32_t argc, char *argv[])
 {
     if (argc == 2)
         return 1;
@@ -637,7 +876,7 @@ void printStart(struct Process processContainer[])
 {
     printf("The original input was: %i", TOTAL_CREATED_PROCESSES);
 
-    uint32_t i = 0;
+    u_int32_t i = 0;
     for (; i < TOTAL_CREATED_PROCESSES; ++i)
     {
         printf(" ( %i %i %i %i)", processContainer[i].A, processContainer[i].B,
@@ -654,7 +893,7 @@ void printFinal(struct Process finishedProcessContainer[])
 {
     printf("The (sorted) input is: %i", TOTAL_CREATED_PROCESSES);
 
-    uint32_t i = 0;
+    u_int32_t i = 0;
     for (; i < TOTAL_FINISHED_PROCESSES; ++i)
     {
         printf(" ( %i %i %i %i)", finishedProcessContainer[i].A, finishedProcessContainer[i].B,
@@ -669,7 +908,7 @@ void printFinal(struct Process finishedProcessContainer[])
  */
 void printProcessSpecifics(struct Process processContainer[])
 {
-    uint32_t i = 0;
+    u_int32_t i = 0;
     printf("\n");
     for (; i < TOTAL_CREATED_PROCESSES; ++i)
     {
@@ -690,12 +929,12 @@ void printProcessSpecifics(struct Process processContainer[])
  */
 void printSummaryData(struct Process processContainer[])
 {
-    uint32_t i = 0;
+    u_int32_t i = 0;
     double totalAmountOfTimeUtilisingCPU = 0.0;
     double totalAmountOfTimeIOBlocked = 0.0;
     double totalAmountOfTimeSpentWaiting = 0.0;
     double totalTurnaroundTime = 0.0;
-    uint32_t finalFinishingTime = CURRENT_CYCLE - 1;
+    u_int32_t finalFinishingTime = CURRENT_CYCLE - 1;
     for (; i < TOTAL_CREATED_PROCESSES; ++i)
     {
         totalAmountOfTimeUtilisingCPU += processContainer[i].currentCPUTimeRun;
@@ -758,7 +997,7 @@ void resetAfterRun(struct Process processContainer[])
 
     CURRENT_RUNNING_PROCESS = NULL;
 
-    uint32_t i = 0;
+    u_int32_t i = 0;
     FILE* randomNumberFile = fopen(RANDOM_NUMBER_FILE_NAME, "r");
     for (; i < TOTAL_CREATED_PROCESSES; ++i)
     {
@@ -790,10 +1029,10 @@ void resetAfterRun(struct Process processContainer[])
  * @param processContainer The original processes inputted, in array form
  * @param finishedProcessContainer The terminated processes array, in which processes are added as they terminated
  * @param randomFile The file to retrieve a "random" number to be used in calculating CPU Burst
- * @param algorithmScheduler Which scheduler algorithm this function should run. 0 = FCFS, 1 = RR, 2 = UNI, 3 = SJF.
+ * @param algorithmScheduler Which scheduler algorithm this function should run. 0 = FCFS, 1 = RR, 2 = UNI, 3 = SJF, 4=LJF.
  */
-void simulateScheduler(uint8_t currentPassNumber, struct Process processContainer[],
-                       struct Process finishedProcessContainer[], FILE* randomFile, uint8_t algorithmScheduler)
+void simulateScheduler(u_int8_t currentPassNumber, struct Process processContainer[],
+                       struct Process finishedProcessContainer[], FILE* randomFile, u_int8_t algorithmScheduler)
 {
     if ((IS_VERBOSE_MODE) && ((currentPassNumber) % 2 == 0))
     {
@@ -857,7 +1096,7 @@ void simulateScheduler(uint8_t currentPassNumber, struct Process processContaine
  * Scheduler wrapper for all scheduler types. NOTE: In order to keep the same format as the given outputs,
  * this scheduler runs each scheduler algorithm, twice, in order to be able to print out the final output early on.
  */
-void schedulerWrapper (struct Process processContainer[], uint8_t algorithmScheduler)
+void schedulerWrapper (struct Process processContainer[], u_int8_t algorithmScheduler)
 {
     // Prints the initial delimiter for each scheduler
     switch (algorithmScheduler)
@@ -874,6 +1113,15 @@ void schedulerWrapper (struct Process processContainer[], uint8_t algorithmSched
         case 3:
             printf("######################### START OF SHORTEST JOB FIRST #########################\n");
             break;
+        case 4://::
+            printf("######################### START OF LONGEST JOB FIRST ##########################\n");
+            break;
+        case 5:
+            printf("######################### HIGHEST RESPONSE RATION NEXT ##########################\n");
+            break;
+        case 6:
+            printf("######################### SHORTEST REMAINING TIME NEXT ##########################\n");
+            break;
         default:
             printf("Error: invalid scheduler algorithm utilised, defaulting to FCFS\n");
             algorithmScheduler = 0;
@@ -881,12 +1129,12 @@ void schedulerWrapper (struct Process processContainer[], uint8_t algorithmSched
     }
 
     printStart(processContainer);
-    uint8_t currentPassNumber = 1;
+    u_int8_t currentPassNumber = 1;
 
     struct Process finishedProcessContainer[TOTAL_CREATED_PROCESSES];
     FILE* randomNumberFile = fopen(RANDOM_NUMBER_FILE_NAME, "r");
     // Runs this the first time in order to have the final output be available
-    while (TOTAL_FINISHED_PROCESSES != TOTAL_CREATED_PROCESSES)
+    while (TOTAL_FINISHED_PROCESSES != TOTAL_CREATED_PROCESSES) //for every process....
         simulateScheduler(currentPassNumber, processContainer, finishedProcessContainer, randomNumberFile, algorithmScheduler);
     fclose(randomNumberFile);
 
@@ -919,6 +1167,15 @@ void schedulerWrapper (struct Process processContainer[], uint8_t algorithmSched
         case 3:
             printf("The scheduling algorithm used was Shortest Job First\n");
             break;
+        case 4:
+            printf("The scheduling algorithm used was Longest Job First\n");
+            break;
+        case 5:
+            printf("The scheduling algorithm used was Highest Response Ratio Next");
+            break;
+        case 6:
+            printf("The scheduling algorithm used was Shortest Remaining Next");
+            break;
         default:
             break;
     }
@@ -941,6 +1198,15 @@ void schedulerWrapper (struct Process processContainer[], uint8_t algorithmSched
             break;
         case 3:
             printf("######################### END OF SHORTEST JOB FIRST #########################\n");
+            break;
+        case 4:
+            printf("######################### END OF LONGEST JOB FIRST #########################\n");
+            break;
+        case 5:
+            printf("######################### END OF Highest Response Next ##########################\n");
+            break;
+        case 6:
+            printf("######################### END OF SHORTEST REMAINING NEXT ##########################\n");
             break;
         default:
             break;
@@ -968,41 +1234,41 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    uint32_t totalNumberOfProcessesToCreate;                    // Given as the first number in the mix
+    u_int32_t totalNumberOfProcessesToCreate;                    // Given as the first number in the mix
     fscanf(inputFile, "%i", &totalNumberOfProcessesToCreate);   // Reads in the indicator number for the mix
 
     randomNumberFile = fopen(RANDOM_NUMBER_FILE_NAME, "r");
-    struct Process processContainer[totalNumberOfProcessesToCreate]; // Creates a container for all processes
+    struct Process processContainer[totalNumberOfProcessesToCreate]; // Creates a container for all processes {datatype arr[3]}
 
     // Reads through the input, and creates all processes given, saving into an array
-    uint32_t currentNumberOfMixesCreated = 0;
-    for (; currentNumberOfMixesCreated < totalNumberOfProcessesToCreate; ++currentNumberOfMixesCreated)
+    u_int32_t currentNumberOfMixesCreated = 0;  // for loop no i=0
+    for (; currentNumberOfMixesCreated < totalNumberOfProcessesToCreate; ++currentNumberOfMixesCreated)// for(i=0,i<3)
     {
-        uint32_t currentInputA;
-        uint32_t currentInputB;
-        uint32_t currentInputC;
-        uint32_t currentInputM;
+        u_int32_t currentInputA;
+        u_int32_t currentInputB;
+        u_int32_t currentInputC;
+        u_int32_t currentInputM;
 
         // Ain't C cool, that you can read in something like this that scans in the job
         fscanf(inputFile, " %*c%i %i %i %i%*c", &currentInputA, &currentInputB, &currentInputC, &currentInputM);
 
-        processContainer[currentNumberOfMixesCreated].A = currentInputA;
+        processContainer[currentNumberOfMixesCreated].A = currentInputA; //arr[i].F = x
         processContainer[currentNumberOfMixesCreated].B = currentInputB;
         processContainer[currentNumberOfMixesCreated].C = currentInputC;
         processContainer[currentNumberOfMixesCreated].M = currentInputM;
 
         processContainer[currentNumberOfMixesCreated].processID = currentNumberOfMixesCreated;
-        processContainer[currentNumberOfMixesCreated].status = 0;
-        processContainer[currentNumberOfMixesCreated].finishingTime = -1;
+        processContainer[currentNumberOfMixesCreated].status = 0; //not started
+        processContainer[currentNumberOfMixesCreated].finishingTime = -1; //not defined or inf
 
         processContainer[currentNumberOfMixesCreated].currentCPUTimeRun = 0;
         processContainer[currentNumberOfMixesCreated].currentIOBlockedTime = 0;
         processContainer[currentNumberOfMixesCreated].currentWaitingTime = 0;
 
-        processContainer[currentNumberOfMixesCreated].CPUBurst = randomOS(processContainer[currentNumberOfMixesCreated].B, randomNumberFile);
+        processContainer[currentNumberOfMixesCreated].CPUBurst = randomOS(processContainer[currentNumberOfMixesCreated].B, randomNumberFile); // cpu burst = 1..B 
         processContainer[currentNumberOfMixesCreated].IOBurst = processContainer[currentNumberOfMixesCreated].M * processContainer[currentNumberOfMixesCreated].CPUBurst;
 
-        processContainer[currentNumberOfMixesCreated].isFirstTimeRunning = false;
+        processContainer[currentNumberOfMixesCreated].isFirstTimeRunning = false; //pata nai kyu
 
         processContainer[currentNumberOfMixesCreated].quantum = 2; // Value provided as described in requirements
 
@@ -1026,6 +1292,22 @@ int main(int argc, char *argv[])
 
     // Shortest Job First Run
     schedulerWrapper(processContainer, 3);
+
+    //:: Longest Job Next
+    schedulerWrapper(processContainer, 4);
+
+    //::HRRN
+    schedulerWrapper(processContainer, 5);
+
+    //::Shortest Remainning Time Next
+    schedulerWrapper(processContainer, 6);
+    /*
+        schedulerW(4,5,6) add karsu
+        HRRN
+        SRTN
+        priority
+        LRJN 
+    */
 
     return EXIT_SUCCESS;
 } // End of the main function
