@@ -49,7 +49,8 @@ typedef enum
 // }
 
 char buffer[1];
-
+double det_array[7][6];
+int cur_ind=0;
 /* Defines a job struct */
 struct Process
 {
@@ -1038,6 +1039,13 @@ void printSummaryData(struct Process processContainer[])
     printf("\tThroughput: %6f processes per hundred cycles\n", throughput);
     printf("\tAverage turnaround time: %6f\n", averageTurnaroundTime);
     printf("\tAverage waiting time: %6f\n", averageWaitingTime);
+    det_array[cur_ind][0]=CURRENT_CYCLE-1;
+    det_array[cur_ind][1]=CPUUtilisation;
+    det_array[cur_ind][2]=IOUtilisation;
+    det_array[cur_ind][3]=throughput;
+    det_array[cur_ind][4]=averageTurnaroundTime;
+    det_array[cur_ind][5]=averageWaitingTime;
+    cur_ind++;
 } // End of the print summary data function
 
 /**
@@ -1213,7 +1221,7 @@ void simulateScheduler(u_int8_t currentPassNumber, struct Process processContain
     incrementTimers(processContainer, algorithmScheduler);
 
     ++CURRENT_CYCLE;
-    usleep(100000);
+    //usleep(100000);
 } // End of the simulate round robin function
 
 /****************************** END OF THE SIMULATION FUNCTIONS **************************************/
@@ -1342,6 +1350,184 @@ void schedulerWrapper(struct Process processContainer[], u_int8_t algorithmSched
 } // End of the scheduler wrapper function for all schedule algorithms
 
 /******************* END OF THE OUTPUT WRAPPER FOR EACH SCHEDULING ALGORITHM *********************************/
+void finishingTimeGraph()
+{
+    FILE * temp = fopen("ft.temp", "w");
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
+    fprintf(temp,"FCFS %f\n",det_array[0][0]);
+    fprintf(temp,"RR %f\n",det_array[1][0]);
+    fprintf(temp,"UNI %f\n",det_array[2][0]);
+    fprintf(temp,"SJF %f\n",det_array[3][0]);
+    fprintf(temp,"LJF %f\n",det_array[4][0]);
+    fprintf(temp,"HRRN %f\n",det_array[5][0]);
+    fprintf(temp,"SRTN %f\n",det_array[6][0]);
+    char * commandsForGnuplot[] = 
+    {"set boxwidth 0.5",
+    "set style fill solid",
+    "set title \"Finishing Time Comparision\" font \"Times-Roman,20\" ",
+    "unset key",
+    "set ylabel 'Time' font \"Times-Roman,15\" ",
+    "set xlabel 'Processes' font \"Times-Roman,15\"",
+    "set yrange [0:]",
+    "plot 'ft.temp' using 2:xtic(1) with boxes fs pattern 7"};
+    for(int i=0; i < 8; i++)
+    {
+        fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
+    }
+}
+void CPUUtiGraph()
+{   
+    FILE * temp = fopen("cpu.temp", "w");
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
+    fprintf(temp,"FCFS %f\n",det_array[0][1]);
+    fprintf(temp,"RR %f\n",det_array[1][1]);
+    fprintf(temp,"UNI %f\n",det_array[2][1]);
+    fprintf(temp,"SJF %f\n",det_array[3][1]);
+    fprintf(temp,"LJF %f\n",det_array[4][1]);
+    fprintf(temp,"HRRN %f\n",det_array[5][1]);
+    fprintf(temp,"SRTN %f\n",det_array[6][1]);
+    char * commandsForGnuplot[] = 
+    {"set boxwidth 0.5",
+    "set style fill solid",
+    "set title \"CPU Utilisation Comparision\" font \"Times-Roman,20\" ",
+    "unset key",
+    "set ylabel 'CPU Uti' font \"Times-Roman,15\" ",
+    "set xlabel 'Processes' font \"Times-Roman,15\"",
+    "set yrange [0:]",
+    "plot 'cpu.temp' using 2:xtic(1) with boxes fs pattern 7"};
+    for(int i=0; i < 8; i++)
+    {
+        fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
+    }
+}
+void IOUtiGraph()
+{
+    FILE * temp = fopen("io.temp", "w");
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
+    fprintf(temp,"FCFS %f\n",det_array[0][2]);
+    fprintf(temp,"RR %f\n",det_array[1][2]);
+    fprintf(temp,"UNI %f\n",det_array[2][2]);
+    fprintf(temp,"SJF %f\n",det_array[3][2]);
+    fprintf(temp,"LJF %f\n",det_array[4][2]);
+    fprintf(temp,"HRRN %f\n",det_array[5][2]);
+    fprintf(temp,"SRTN %f\n",det_array[6][2]);
+    char * commandsForGnuplot[] = 
+    {"set boxwidth 0.5",
+    "set style fill solid",
+    "set title \"I/O Utilisation Comparision\" font \"Times-Roman,20\" ",
+    "unset key",
+    "set ylabel 'IO Uti' font \"Times-Roman,15\" ",
+    "set xlabel 'Processes' font \"Times-Roman,15\"",
+    "set yrange [0:]",
+    "plot 'io.temp' using 2:xtic(1) with boxes fs pattern 7"};
+    for(int i=0; i < 8; i++)
+    {
+        fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
+    }
+}
+void throughputGraph()
+{
+    FILE * temp = fopen("thr.temp", "w");
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
+    fprintf(temp,"FCFS %f\n",det_array[0][3]);
+    fprintf(temp,"RR %f\n",det_array[1][3]);
+    fprintf(temp,"UNI %f\n",det_array[2][3]);
+    fprintf(temp,"SJF %f\n",det_array[3][3]);
+    fprintf(temp,"LJF %f\n",det_array[4][3]);
+    fprintf(temp,"HRRN %f\n",det_array[5][3]);
+    fprintf(temp,"SRTN %f\n",det_array[6][3]);
+    char * commandsForGnuplot[] = 
+    {"set boxwidth 0.5",
+    "set style fill solid",
+    "set title \"Throughput Comparision\" font \"Times-Roman,20\" ",
+    "unset key",
+    "set ylabel 'Throughput/100 cycles' font \"Times-Roman,15\" ",
+    "set xlabel 'Processes' font \"Times-Roman,15\"",
+    "set yrange [0:]",
+    "plot 'thr.temp' using 2:xtic(1) with boxes fs pattern 7"};
+    for(int i=0; i < 8; i++)
+    {
+        fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
+    }
+}
+void turnaroundTimeGraph() 
+{
+    FILE * temp = fopen("turn.temp", "w");
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
+    fprintf(temp,"FCFS %f\n",det_array[0][4]);
+    fprintf(temp,"RR %f\n",det_array[1][4]);
+    fprintf(temp,"UNI %f\n",det_array[2][4]);
+    fprintf(temp,"SJF %f\n",det_array[3][4]);
+    fprintf(temp,"LJF %f\n",det_array[4][4]);
+    fprintf(temp,"HRRN %f\n",det_array[5][4]);
+    fprintf(temp,"SRTN %f\n",det_array[6][4]);
+    char * commandsForGnuplot[] = 
+    {"set boxwidth 0.5",
+    "set style fill solid",
+    "set title \"Average Turnaround time Comparision\" font \"Times-Roman,20\" ",
+    "unset key",
+    "set ylabel 'Time' font \"Times-Roman,15\" ",
+    "set xlabel 'Processes' font \"Times-Roman,15\"",
+    "set yrange [0:]",
+    "plot 'turn.temp' using 2:xtic(1) with boxes fs pattern 7"};
+    for(int i=0; i < 8; i++)
+    {
+        fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
+    }
+}
+void waitingTimeGraph()
+{
+    FILE * temp = fopen("wait.temp", "w");
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
+    fprintf(temp,"FCFS %f\n",det_array[0][5]);
+    fprintf(temp,"RR %f\n",det_array[1][5]);
+    fprintf(temp,"UNI %f\n",det_array[2][5]);
+    fprintf(temp,"SJF %f\n",det_array[3][5]);
+    fprintf(temp,"LJF %f\n",det_array[4][5]);
+    fprintf(temp,"HRRN %f\n",det_array[5][5]);
+    fprintf(temp,"SRTN %f\n",det_array[6][5]);
+    char * commandsForGnuplot[] = 
+    {"set boxwidth 0.5",
+    "set style fill solid",
+    "set title \"Average waiting time Comparision\" font \"Times-Roman,20\" ",
+    "unset key",
+    "set ylabel 'Time' font \"Times-Roman,15\" ",
+    "set xlabel 'Processes' font \"Times-Roman,15\"",
+    "set yrange [0:]",
+    "plot 'wait.temp' using 2:xtic(1) with boxes fs pattern 7"};
+    for(int i=0; i < 8; i++)
+    {
+        fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
+    }
+}
+void plotGraphs()
+{
+    FILE * temp = fopen("data.temp", "w");
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
+    fprintf(temp,"temp FCFS RR UNI SJF LJF HRRN SRTN\n");
+    fprintf(temp,"FinishingTime %f %f %f %f %f %f %f\n",det_array[0][0],det_array[1][0],det_array[2][0],det_array[3][0],det_array[4][0],det_array[5][0],det_array[6][0]);
+    fprintf(temp,"AvgTurnaroundTime %f %f %f %f %f %f %f\n",det_array[0][4],det_array[1][4],det_array[2][4],det_array[3][4],det_array[4][4],det_array[5][4],det_array[6][4]);
+    fprintf(temp,"AvgWaitingTime %f %f %f %f %f %f %f\n",det_array[0][5],det_array[1][5],det_array[2][5],det_array[3][5],det_array[4][5],det_array[5][5],det_array[6][5]);
+    char * commandsForGnuplot[] = 
+    {"set title \"Comparsision between processes\" font \"Times-Roman,20\" ",
+    "set boxwidth 0.75",
+    "fontSpec(s) = sprintf(\"Times-Roman, %d\", s)",
+    "set style data histogram",
+    "set style fill solid",
+    "set style histogram clustered",
+    "set ylabel 'Time' font \"Times-Roman,15\" ",
+    "plot for [COL=2:8]'data.temp' using COL:xtic(1) title columnheader fs pattern 7"};
+    for(int i=0; i < 8; i++)
+    {
+        fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
+    }
+    finishingTimeGraph();
+    CPUUtiGraph();
+    IOUtiGraph();
+    throughputGraph();
+    turnaroundTimeGraph();
+    waitingTimeGraph();
+}
 
 /**
  * Runs the actual process scheduler, based upon the commandline input. For example run commands, please see the README
@@ -1438,5 +1624,6 @@ int main(int argc, char *argv[])
         LRJN 
     */
 
+    plotGraphs();
     return EXIT_SUCCESS;
 } // End of the main function
