@@ -1401,7 +1401,7 @@ void comparisionGraph()
 }
 void finishingTimeGraph()
 {
-    FILE * finishingFilePoiter = fopen("ft.txt", "w");              // open ft.txt to store finishing time of all processes
+    FILE * finishingFilePoiter = fopen("ft.txt", "w");       // open ft.txt to store finishing time of all scheduling algprithm
     FILE * gnuplotPipe = popen ("gnuplot -persistent", "w"); // open gnu plot
     /* Entering data in ft.txt */
     fprintf(finishingFilePoiter,"FCFS %f\n",outputs_array[0][0]);
@@ -1440,7 +1440,7 @@ void finishingTimeGraph()
 }
 void CPUUtiGraph()
 {   
-    FILE * cpuFilePointer = fopen("cpu.txt", "w");           // open cpu.txt to store cpu time of all processes
+    FILE * cpuFilePointer = fopen("cpu.txt", "w");           // open cpu.txt to store cpu time of all scheduling algorithm
     FILE * gnuplotPipe = popen ("gnuplot -persistent", "w"); // opne gnu plot
     /* Entering data in cpu.txt */
     fprintf(cpuFilePointer,"FCFS %f\n",outputs_array[0][1]);
@@ -1468,7 +1468,7 @@ void CPUUtiGraph()
     "set title \"CPU Utilisation Comparision\" font \"Times-Roman,20\" ",
     "unset key",
     "set ylabel 'CPU Uti' font \"Times-Roman,15\" ",
-    "set xlabel 'Processes' font \"Times-Roman,15\"",
+    "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
     "set yrange [0:]",
     "plot 'cpu.txt' using 2:xtic(1) with boxes fs pattern 7"};
     /* running all commands */
@@ -1479,7 +1479,7 @@ void CPUUtiGraph()
 }
 void IOUtiGraph()
 {
-    FILE * ioFilePointer = fopen("io.txt", "w");            // open io.rxt to store I/O Utilsation time of all processes
+    FILE * ioFilePointer = fopen("io.txt", "w");            // open io.rxt to store I/O Utilsation time of all scheduling algorithm
     FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");// open gnuplot
     /* Entering data in io.txt */
     fprintf(ioFilePointer,"FCFS %f\n",outputs_array[0][2]);
@@ -1507,7 +1507,7 @@ void IOUtiGraph()
     "set title \"I/O Utilisation Comparision\" font \"Times-Roman,20\" ",
     "unset key",
     "set ylabel 'IO Uti' font \"Times-Roman,15\" ",
-    "set xlabel 'Processes' font \"Times-Roman,15\"",
+    "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
     "set yrange [0:]",
     "plot 'io.txt' using 2:xtic(1) with boxes fs pattern 7"};
     /* running all commands */
@@ -1518,7 +1518,7 @@ void IOUtiGraph()
 }
 void throughputGraph()
 {
-    FILE * thrPutFilePointer = fopen("thr.txt", "w");       // open thr.txt to store throughput time of all processes
+    FILE * thrPutFilePointer = fopen("thr.txt", "w");       // open thr.txt to store throughput time of all scheduling algorithms
     FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");// oprn gnuplot
     /* Entering data in thr.txt */
     fprintf(thrPutFilePointer,"FCFS %f\n",outputs_array[0][3]);
@@ -1546,7 +1546,7 @@ void throughputGraph()
     "set title \"Throughput Comparision\" font \"Times-Roman,20\" ",
     "unset key",
     "set ylabel 'Throughput/100 cycles' font \"Times-Roman,15\" ",
-    "set xlabel 'Processes' font \"Times-Roman,15\"",
+    "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
     "set yrange [0:]",
     "plot 'thr.txt' using 2:xtic(1) with boxes fs pattern 7"};
     /* running all commands */
@@ -1557,7 +1557,7 @@ void throughputGraph()
 }
 void turnaroundTimeGraph() 
 {
-    FILE * turnAroundFilePointer = fopen("turn.txt", "w");  // open turn.txt to store turnaroud time of all processes
+    FILE * turnAroundFilePointer = fopen("turn.txt", "w");  // open turn.txt to store turnaroud time of all scheduling process
     FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");// open gnuplot
     /* Entering data in turn.txt */
     fprintf(turnAroundFilePointer,"FCFS %f\n",outputs_array[0][4]);
@@ -1585,7 +1585,7 @@ void turnaroundTimeGraph()
     "set title \"Average Turnaround time Comparision\" font \"Times-Roman,20\" ",
     "unset key",
     "set ylabel 'Time' font \"Times-Roman,15\" ",
-    "set xlabel 'Processes' font \"Times-Roman,15\"",
+    "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
     "set yrange [0:]",
     "plot 'turn.txt' using 2:xtic(1) with boxes fs pattern 7"};
     /* running all commands */
@@ -1596,7 +1596,7 @@ void turnaroundTimeGraph()
 }
 void waitingTimeGraph()
 {
-    FILE * waitingFilePointer = fopen("wait.txt", "w");     // open wait.txt to store waiting time of all processes
+    FILE * waitingFilePointer = fopen("wait.txt", "w");     // open wait.txt to store waiting time of all scheduling algporithm
     FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");// open gnuplot
     /* Entering data in wait.txt */
     fprintf(waitingFilePointer,"FCFS %f\n",outputs_array[0][5]);
@@ -1624,7 +1624,7 @@ void waitingTimeGraph()
     "set title \"Average waiting time Comparision\" font \"Times-Roman,20\" ",
     "unset key",
     "set ylabel 'Time' font \"Times-Roman,15\" ",
-    "set xlabel 'Processes' font \"Times-Roman,15\"",
+    "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
     "set yrange [0:]",
     "plot 'wait.txt' using 2:xtic(1) with boxes fs pattern 7"};
     /* running all commands */
