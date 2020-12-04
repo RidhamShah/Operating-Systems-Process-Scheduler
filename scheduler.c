@@ -11,46 +11,48 @@ typedef enum
     false,
     true
 } bool; // Allows boolean types in C
-// bool kbhit()
-// {
-//     termios term;
-//     tcgetattr(0, &term);
 
-//     termios term2 = term;
-//     term2.c_lflag &= ~ICANON;
-//     tcsetattr(0, TCSANOW, &term2);
+/*
+bool kbhit()
+{
+    termios term;
+    tcgetattr(0, &term);
 
-//     int byteswaiting;
-//     ioctl(0, FIONREAD, &byteswaiting);
+    termios term2 = term;
+    term2.c_lflag &= ~ICANON;
+    tcsetattr(0, TCSANOW, &term2);
 
-//     tcsetattr(0, TCSANOW, &term);
+    int byteswaiting;
+    ioctl(0, FIONREAD, &byteswaiting);
 
-//     return byteswaiting > 0;
-// }
-//#include <stropts.h>
+    tcsetattr(0, TCSANOW, &term);
 
-// int _kbhit() {
-//     static const int STDIN = 0;
-//     static bool initialized = false;
+    return byteswaiting > 0;
+}
+#include <stropts.h>
 
-//     if (! initialized) {
-//         // Use termios to turn off line buffering
-//         termios term;
-//         tcgetattr(STDIN, &term);
-//         term.c_lflag &= ~ICANON;
-//         tcsetattr(STDIN, TCSANOW, &term);
-//         setbuf(stdin, NULL);
-//         initialized = true;
-//     }
+int _kbhit() {
+    static const int STDIN = 0;
+    static bool initialized = false;
 
-//     int bytesWaiting;
-//     ioctl(STDIN, FIONREAD, &bytesWaiting);
-//     return bytesWaiting;
-// }
+    if (! initialized) {
+        // Use termios to turn off line buffering
+        termios term;
+        tcgetattr(STDIN, &term);
+        term.c_lflag &= ~ICANON;
+        tcsetattr(STDIN, TCSANOW, &term);
+        setbuf(stdin, NULL);
+        initialized = true;
+    }
 
-char buffer[1];
-double det_array[7][6];
-int cur_ind=0;
+    int bytesWaiting;
+    ioctl(STDIN, FIONREAD, &bytesWaiting);
+    return bytesWaiting;
+}*/
+
+char buffer[1];             // store buffer character
+double outputs_array[7][6]; // stores the every outputs of every processes
+int oa_index=0;             // points the index of outputs_array
 /* Defines a job struct */
 struct Process
 {
@@ -90,7 +92,6 @@ fd_set set;        // For using Dynamic input
 struct timeval tv; // (kbhit doesnot work in linux, so finfing appropriate alternative)
 struct termios t;  // Trying to make it work
 u_int32_t interrupt_count = 0;
-FILE *resume;
 // All for dynamic input
 
 u_int32_t CURRENT_CYCLE = 0;            // The current cycle that each process is on
@@ -555,32 +556,32 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                 readiedProcess->CPUBurst = newCPUBurst;
                 CURRENT_RUNNING_PROCESS = readiedProcess;
             } // End of dealing with shortest job first
-            else if (schedulerAlgorithm == 4)
+            else if (schedulerAlgorithm == 4) // Code for running Longest Job Next (LJN)
             {
-                // Scheduler is shortest job first, meaning in lowest remaining CPU time required
+                // Scheduler is Longest Job Next, meaning in highest remaining CPU time required
                 u_int32_t i = 0;
                 struct Process *currentReadyProcess = readyHead;
-                struct Process *shortestJobProcess = readyHead;
-                for (; i < readyProcessQueueSize; ++i) // minimum sodhe che ---> mn = min(mn,i-j);
+                struct Process *longestJobProcess = readyHead;
+                for (; i < readyProcessQueueSize; ++i) 
                 {
-                    if ((shortestJobProcess->C - shortestJobProcess->currentCPUTimeRun) <
+                    if ((longestJobProcess->C - longestJobProcess->currentCPUTimeRun) <
                         (currentReadyProcess->C - currentReadyProcess->currentCPUTimeRun))
                     {
-                        // Old shortest job is greater than the new one, sets the shortest job to point to the new one
-                        shortestJobProcess = currentReadyProcess;
+                        // If current process is longer than it would be transferred to longestjobProcess
+                        longestJobProcess = currentReadyProcess;
                     }
                     currentReadyProcess = currentReadyProcess->nextInReadyQueue;
-                } // End of iterating through to find the shortest time remaining
+                } // End of iterating through to find the longest time remaining
 
-                // Needs to deal with removing the shortest job from the ready list (from front, back, and middle)
+                // Needs to deal with removing the longest job from the ready list (from front, back, and middle)
                 struct Process *readiedProcess;
 
-                if (readyHead->processID == shortestJobProcess->processID)
+                if (readyHead->processID == longestJobProcess->processID)
                 {
                     // Dequeueing from the head of ready (normal dequeue)
                     readiedProcess = dequeueReadyProcess();
                 }
-                else if (readyTail->processID == shortestJobProcess->processID)
+                else if (readyTail->processID == longestJobProcess->processID)
                 {
                     // Dequeues from the tail of ready list
                     struct Process *currentReadyIterationProcess = readyHead;
@@ -601,7 +602,7 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                     // Dequeues from the middle of ready list
                     struct Process *currentReadyIterationProcess = readyHead;
                     // Iterates until right before the middle block
-                    while (currentReadyIterationProcess->nextInReadyQueue->processID != shortestJobProcess->processID)
+                    while (currentReadyIterationProcess->nextInReadyQueue->processID != longestJobProcess->processID)
                     {
                         currentReadyIterationProcess = currentReadyIterationProcess->nextInReadyQueue;
                     }
@@ -614,7 +615,7 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                     --readyProcessQueueSize;
                 }
 
-                // At this point, we have the shortest job process that should be sent, so sets it running
+                // At this point, we have the longest job process that should be sent, so sets it running
                 readiedProcess->status = 2;
                 readiedProcess->isFirstTimeRunning = true;
 
@@ -624,46 +625,46 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                 if ((IS_RANDOM_MODE) && (currentPassNumber % 2 == 0))
                     printf("Find burst when choosing ready process to run %i\n", unsignedRandomInteger);
 
-                u_int32_t newCPUBurst = 1 + (unsignedRandomInteger % shortestJobProcess->B);
+                u_int32_t newCPUBurst = 1 + (unsignedRandomInteger % longestJobProcess->B);
                 // Checks if the new CPU Burst time is greater than the time remaining
                 if (newCPUBurst > (readiedProcess->C - readiedProcess->currentCPUTimeRun))
                     newCPUBurst = readiedProcess->C - readiedProcess->currentCPUTimeRun;
                 readiedProcess->CPUBurst = newCPUBurst;
                 CURRENT_RUNNING_PROCESS = readiedProcess;
-            } //::
-            else if (schedulerAlgorithm == 5)
+            } 
+            else if (schedulerAlgorithm == 5) // Code for Highest Response Ratio Next
             {
-                // HRRN (w / s + 1)
+                // HRRN 
+                // max[(w+s)/s] = max[w/s + 1] = max[w/s]
                 u_int32_t i = 0;
                 struct Process *currentReadyProcess = readyHead;
-                struct Process *shortestJobProcess = readyHead;
+                struct Process *highestRatioProcess = readyHead;
                 // PRINT CURRENTREADYPROCESS DETAILS
 
                 double ans;
-                for (; i < readyProcessQueueSize; ++i) // minimum sodhe che ---> mn = max(mn,i-j);
+                for (; i < readyProcessQueueSize; ++i) 
                 {
-                    double w1 = (1.0 * (shortestJobProcess->currentWaitingTime)) / (shortestJobProcess->C - shortestJobProcess->currentCPUTimeRun); //temp w/s
+                    double w1 = (1.0 * (highestRatioProcess->currentWaitingTime)) / (highestRatioProcess->C - highestRatioProcess->currentCPUTimeRun); //temp w/s
                     double w2 = (1.0 * (currentReadyProcess->currentWaitingTime)) / (currentReadyProcess->C - currentReadyProcess->currentCPUTimeRun);
-                    //printf("::::\nThese are the 'W / S' %f with PID = %i\n",w2,currentReadyProcess->processID);
+                    // finding highest ratio from all the process
                     if ((w1) < (w2))
                     {
-                        // Old shortest job is greater than the new one, sets the shortest job to point to the new one
+                        // if the current ratio is greater than put in highestRatioProcess
                         ans = w2;
-                        shortestJobProcess = currentReadyProcess;
+                        highestRatioProcess = currentReadyProcess;
                     }
                     currentReadyProcess = currentReadyProcess->nextInReadyQueue;
                 }
-                // End of iterating through to find the shortest time remaining
-                //printf("::%i::%f::\n",shortestJobProcess->processID,ans);
-                // Needs to deal with removing the shortest job from the ready list (from front, back, and middle)
+                // End of iterating through to find the highest ratio
+                // Needs to deal with removing the highest ratio job from the ready list (from front, back, and middle)
                 struct Process *readiedProcess;
 
-                if (readyHead->processID == shortestJobProcess->processID)
+                if (readyHead->processID == highestRatioProcess->processID)
                 {
                     // Dequeueing from the head of ready (normal dequeue)
                     readiedProcess = dequeueReadyProcess();
                 }
-                else if (readyTail->processID == shortestJobProcess->processID)
+                else if (readyTail->processID == highestRatioProcess->processID)
                 {
                     // Dequeues from the tail of ready list
                     struct Process *currentReadyIterationProcess = readyHead;
@@ -685,7 +686,7 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                     struct Process *currentReadyIterationProcess = readyHead;
 
                     // Iterates until right before the middle block
-                    while (currentReadyIterationProcess->nextInReadyQueue->processID != shortestJobProcess->processID)
+                    while (currentReadyIterationProcess->nextInReadyQueue->processID != highestRatioProcess->processID)
                     {
                         currentReadyIterationProcess = currentReadyIterationProcess->nextInReadyQueue;
                     }
@@ -698,7 +699,7 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                     --readyProcessQueueSize;
                 }
 
-                // At this point, we have the shortest job process that should be sent, so sets it running
+                // At this point, we have the highest response ratio process that should be sent, so sets it running
                 readiedProcess->status = 2;
                 readiedProcess->isFirstTimeRunning = true;
 
@@ -708,39 +709,39 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                 if ((IS_RANDOM_MODE) && (currentPassNumber % 2 == 0))
                     printf("Find burst when choosing ready process to run %i\n", unsignedRandomInteger);
 
-                u_int32_t newCPUBurst = 1 + (unsignedRandomInteger % shortestJobProcess->B);
+                u_int32_t newCPUBurst = 1 + (unsignedRandomInteger % highestRatioProcess->B);
                 // Checks if the new CPU Burst time is greater than the time remaining
                 if (newCPUBurst > (readiedProcess->C - readiedProcess->currentCPUTimeRun))
                     newCPUBurst = readiedProcess->C - readiedProcess->currentCPUTimeRun;
                 readiedProcess->CPUBurst = newCPUBurst;
                 CURRENT_RUNNING_PROCESS = readiedProcess;
             }
-            else if (schedulerAlgorithm == 6)
+            else if (schedulerAlgorithm == 6) // code for Shortest Remaining Time Next
             {
                 //srtn
                 u_int32_t i = 0;
                 struct Process *currentReadyProcess = readyHead;
-                struct Process *shortestJobProcess = readyHead;
-                for (; i < readyProcessQueueSize; ++i) // minimum sodhe che ---> mn = min(mn,i-j);
+                struct Process *shortestRemainingProcess = readyHead;
+                for (; i < readyProcessQueueSize; ++i) 
                 {
-                    if ((shortestJobProcess->C - shortestJobProcess->currentCPUTimeRun) <
+                    if ((shortestRemainingProcess->C - shortestRemainingProcess->currentCPUTimeRun) <
                         (currentReadyProcess->C - currentReadyProcess->currentCPUTimeRun))
                     {
-                        // Old shortest job is greater than the new one, sets the shortest job to point to the new one
-                        shortestJobProcess = currentReadyProcess;
+                        // Old shortest remaining time  is greater than the new one, sets the shortest remaining time to point to the new one
+                        shortestRemainingProcess = currentReadyProcess;
                     }
                     currentReadyProcess = currentReadyProcess->nextInReadyQueue;
-                } // End of iterating through to find the shortest time remaining
+                } // End of iterating through to find the shortest remaining time
 
-                // Needs to deal with removing the shortest job from the ready list (from front, back, and middle)
+                // Needs to deal with removing the shortest remaining time from the ready list (from front, back, and middle)
                 struct Process *readiedProcess;
 
-                if (readyHead->processID == shortestJobProcess->processID)
+                if (readyHead->processID == shortestRemainingProcess->processID)
                 {
                     // Dequeueing from the head of ready (normal dequeue)
                     readiedProcess = dequeueReadyProcess();
                 }
-                else if (readyTail->processID == shortestJobProcess->processID)
+                else if (readyTail->processID == shortestRemainingProcess->processID)
                 {
                     // Dequeues from the tail of ready list
                     struct Process *currentReadyIterationProcess = readyHead;
@@ -762,7 +763,7 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                     struct Process *currentReadyIterationProcess = readyHead;
 
                     // Iterates until right before the middle block
-                    while (currentReadyIterationProcess->nextInReadyQueue->processID != shortestJobProcess->processID)
+                    while (currentReadyIterationProcess->nextInReadyQueue->processID != shortestRemainingProcess->processID)
                     {
                         currentReadyIterationProcess = currentReadyIterationProcess->nextInReadyQueue;
                     }
@@ -775,14 +776,14 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                     --readyProcessQueueSize;
                 }
 
-                // At this point, we have the shortest job process that should be sent, so sets it running
+                // At this point, we have the shortest remaining time process that should be sent, so sets it running
                 char str[20];
                 u_int32_t unsignedRandomInteger = (u_int32_t)atoi(fgets(str, 20, randomFile));
                 // Prints out the random number, assuming the random flag is passed in
                 if ((IS_RANDOM_MODE) && (currentPassNumber % 2 == 0))
                     printf("Find burst when choosing ready process to run %i\n", unsignedRandomInteger);
 
-                u_int32_t newCPUBurst = 1 + (unsignedRandomInteger % shortestJobProcess->B);
+                u_int32_t newCPUBurst = 1 + (unsignedRandomInteger % shortestRemainingProcess->B);
                 // Checks if the new CPU Burst time is greater than the time remaining
                 if (newCPUBurst > (readiedProcess->C - readiedProcess->currentCPUTimeRun))
                     newCPUBurst = readiedProcess->C - readiedProcess->currentCPUTimeRun;
@@ -795,7 +796,7 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
 
                     if (schedulerAlgorithm == 6)
                     {
-                        // Scheduler is round robin, sets the quantum
+                        // Scheduler is srtn, sets the quantum
                         readiedProcess->quantum = 2;
                     }
                     CURRENT_RUNNING_PROCESS = readiedProcess;
@@ -1039,13 +1040,14 @@ void printSummaryData(struct Process processContainer[])
     printf("\tThroughput: %6f processes per hundred cycles\n", throughput);
     printf("\tAverage turnaround time: %6f\n", averageTurnaroundTime);
     printf("\tAverage waiting time: %6f\n", averageWaitingTime);
-    det_array[cur_ind][0]=CURRENT_CYCLE-1;
-    det_array[cur_ind][1]=CPUUtilisation;
-    det_array[cur_ind][2]=IOUtilisation;
-    det_array[cur_ind][3]=throughput;
-    det_array[cur_ind][4]=averageTurnaroundTime;
-    det_array[cur_ind][5]=averageWaitingTime;
-    cur_ind++;
+    /* storing every output in outputs_array */
+    outputs_array[oa_index][0]=CURRENT_CYCLE-1;
+    outputs_array[oa_index][1]=CPUUtilisation;
+    outputs_array[oa_index][2]=IOUtilisation;
+    outputs_array[oa_index][3]=throughput;
+    outputs_array[oa_index][4]=averageTurnaroundTime;
+    outputs_array[oa_index][5]=averageWaitingTime;
+    oa_index++;
 } // End of the print summary data function
 
 /**
@@ -1103,16 +1105,19 @@ void resetAfterRun(struct Process processContainer[])
 
 void addDynamicProcess(struct Process processContainer[])
 {
-    srand(time(0)) ;
-    FILE *randfp;
-    u_int32_t currentInputA = (rand()%5 + 1) ;
+    srand(time(0));     //to create random number
+    FILE *randomFilePointer;
+
+    /* giving random parameter to process parameters */
+    u_int32_t currentInputA = (rand()%5 + 1);
     u_int32_t currentInputB = (rand()%5 + 1);
     u_int32_t currentInputC = (rand()%10 + 1);
     u_int32_t currentInputM = (rand()%5 + 1);
 
     // Ain't C cool, that you can read in something like this that scans in the job
-    randfp = fopen(RANDOM_NUMBER_FILE_NAME, "r");
+    randomFilePointer = fopen(RANDOM_NUMBER_FILE_NAME, "r");
 
+    /* assigning every details of the new created process */
     processContainer[TOTAL_CREATED_PROCESSES].A = 1 + CURRENT_CYCLE; //arr[i].F = x
     processContainer[TOTAL_CREATED_PROCESSES].B = currentInputB;
     processContainer[TOTAL_CREATED_PROCESSES].C = currentInputC;
@@ -1126,7 +1131,7 @@ void addDynamicProcess(struct Process processContainer[])
     processContainer[TOTAL_CREATED_PROCESSES].currentIOBlockedTime = 0;
     processContainer[TOTAL_CREATED_PROCESSES].currentWaitingTime = 0;
 
-    processContainer[TOTAL_CREATED_PROCESSES].CPUBurst = randomOS(processContainer[TOTAL_CREATED_PROCESSES].B, randfp); // cpu burst = 1..B
+    processContainer[TOTAL_CREATED_PROCESSES].CPUBurst = randomOS(processContainer[TOTAL_CREATED_PROCESSES].B, randomFilePointer); // cpu burst = 1..B
     processContainer[TOTAL_CREATED_PROCESSES].IOBurst = processContainer[TOTAL_CREATED_PROCESSES].M * processContainer[TOTAL_CREATED_PROCESSES].CPUBurst;
 
     processContainer[TOTAL_CREATED_PROCESSES].isFirstTimeRunning = false; //pata nai kyu
@@ -1137,7 +1142,7 @@ void addDynamicProcess(struct Process processContainer[])
     processContainer[TOTAL_CREATED_PROCESSES].nextInReadyQueue = NULL;
     processContainer[TOTAL_CREATED_PROCESSES].nextInReadySuspendedQueue = NULL;
     ++TOTAL_CREATED_PROCESSES;
-    fclose(randfp);
+    fclose(randomFilePointer);
 }
 
 /********************* END OF GLOBAL OUTPUT FUNCTIONS *********************************************************/
@@ -1153,11 +1158,13 @@ void addDynamicProcess(struct Process processContainer[])
 void simulateScheduler(u_int8_t currentPassNumber, struct Process processContainer[],
                        struct Process finishedProcessContainer[], FILE *randomFile, u_int8_t algorithmScheduler)
 {
+    // for interrupt 
     memset(&tv, 0, sizeof(tv));
     tcgetattr(0, &t);
     t.c_lflag &= ~ICANON;
-    /*cfmakeraw(&t);*/
     tcsetattr(0, TCSANOW, &t);
+    /*cfmakeraw(&t);*/
+
     if ((IS_VERBOSE_MODE) && ((currentPassNumber) % 2 == 0))
     {
         // Prints out the state of each process during the current cycle
@@ -1192,6 +1199,8 @@ void simulateScheduler(u_int8_t currentPassNumber, struct Process processContain
                 fprintf(stderr, "Error: Invalid process status code, exiting now!\n");
                 exit(1);
             } // End of the per process status print statement
+
+            // if user presses any key an interrupt will call
             FD_ZERO(&set);
             FD_SET(0, &set);
             select(1, &set, 0, 0, &tv);
@@ -1221,6 +1230,7 @@ void simulateScheduler(u_int8_t currentPassNumber, struct Process processContain
     incrementTimers(processContainer, algorithmScheduler);
 
     ++CURRENT_CYCLE;
+    /* Adding sleep of 0.1s to make clock of 0.1s */
     //usleep(100000);
 } // End of the simulate round robin function
 
@@ -1249,7 +1259,7 @@ void schedulerWrapper(struct Process processContainer[], u_int8_t algorithmSched
     case 3:
         printf("######################### START OF SHORTEST JOB FIRST #########################\n");
         break;
-    case 4: //::
+    case 4: 
         printf("######################### START OF LONGEST JOB FIRST ##########################\n");
         break;
     case 5:
@@ -1350,17 +1360,69 @@ void schedulerWrapper(struct Process processContainer[], u_int8_t algorithmSched
 } // End of the scheduler wrapper function for all schedule algorithms
 
 /******************* END OF THE OUTPUT WRAPPER FOR EACH SCHEDULING ALGORITHM *********************************/
+
+/* Creating graph of comaprision between processes usign GNUPLOT */
+void comparisionGraph()
+{
+    FILE * dataFilePointer = fopen("data.txt", "w");         // open data.txt file to store all data
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w"); // open gnuplot to plot graph
+
+    /* Entering data in data.txt */
+    fprintf(dataFilePointer,"temp FCFS RR UNI SJF LJF HRRN SRTN\n");
+    fprintf(dataFilePointer,"FinishingTime %f %f %f %f %f %f %f\n",outputs_array[0][0],outputs_array[1][0],outputs_array[2][0],outputs_array[3][0],outputs_array[4][0],outputs_array[5][0],outputs_array[6][0]);
+    fprintf(dataFilePointer,"AvgTurnaroundTime %f %f %f %f %f %f %f\n",outputs_array[0][4],outputs_array[1][4],outputs_array[2][4],outputs_array[3][4],outputs_array[4][4],outputs_array[5][4],outputs_array[6][4]);
+    fprintf(dataFilePointer,"AvgWaitingTime %f %f %f %f %f %f %f\n",outputs_array[0][5],outputs_array[1][5],outputs_array[2][5],outputs_array[3][5],outputs_array[4][5],outputs_array[5][5],outputs_array[6][5]);
+
+    /* commands for GNUPLOT explaination */
+    /*
+    setting title with custom font
+    setting bar size
+    setting a variable to store font details
+    creating histogram
+    fill inside of every bars
+    setting histogram to cluster
+    setting y-axis
+    setting x-axis having histogram of 2-8 column from data.txt file having custom name store in col1 and having bargraph patter 7
+    */
+    char * commandsForGnuplot[] = 
+    {"set title \"Comparsision between processes\" font \"Times-Roman,20\" ", 
+    "set boxwidth 0.75",
+    "fontSpec(s) = sprintf(\"Times-Roman, %d\", s)",
+    "set style data histogram",
+    "set style fill solid",
+    "set style histogram clustered",
+    "set ylabel 'Time' font \"Times-Roman,15\" ",
+    "plot for [COL=2:8]'data.txt' using COL:xtic(1) title columnheader fs pattern 7"};
+    /* running all commands */
+    for(int i=0; i < 8; i++)
+    {
+        fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
+    }
+}
 void finishingTimeGraph()
 {
-    FILE * temp = fopen("ft.temp", "w");
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
-    fprintf(temp,"FCFS %f\n",det_array[0][0]);
-    fprintf(temp,"RR %f\n",det_array[1][0]);
-    fprintf(temp,"UNI %f\n",det_array[2][0]);
-    fprintf(temp,"SJF %f\n",det_array[3][0]);
-    fprintf(temp,"LJF %f\n",det_array[4][0]);
-    fprintf(temp,"HRRN %f\n",det_array[5][0]);
-    fprintf(temp,"SRTN %f\n",det_array[6][0]);
+    FILE * finishingFilePoiter = fopen("ft.txt", "w");              // open ft.txt to store finishing time of all processes
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w"); // open gnu plot
+    /* Entering data in ft.txt */
+    fprintf(finishingFilePoiter,"FCFS %f\n",outputs_array[0][0]);
+    fprintf(finishingFilePoiter,"RR %f\n",outputs_array[1][0]);
+    fprintf(finishingFilePoiter,"UNI %f\n",outputs_array[2][0]);
+    fprintf(finishingFilePoiter,"SJF %f\n",outputs_array[3][0]);
+    fprintf(finishingFilePoiter,"LJF %f\n",outputs_array[4][0]);
+    fprintf(finishingFilePoiter,"HRRN %f\n",outputs_array[5][0]);
+    fprintf(finishingFilePoiter,"SRTN %f\n",outputs_array[6][0]);
+
+    /* commands for GNUPLOT */
+    /*
+    setting bar size
+    setting bar style to fill
+    setting title with custom fonts
+    removing legends
+    setting x axis with custom fonts
+    setting y axis with custom fonts
+    y axis starts from 0
+    ploting from ft.txt having custom name store in column 1 and bar style 7
+    */
     char * commandsForGnuplot[] = 
     {"set boxwidth 0.5",
     "set style fill solid",
@@ -1369,7 +1431,8 @@ void finishingTimeGraph()
     "set ylabel 'Time' font \"Times-Roman,15\" ",
     "set xlabel 'Processes' font \"Times-Roman,15\"",
     "set yrange [0:]",
-    "plot 'ft.temp' using 2:xtic(1) with boxes fs pattern 7"};
+    "plot 'ft.txt' using 2:xtic(1) with boxes fs pattern 7"};
+    /* running all commands */
     for(int i=0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
@@ -1377,15 +1440,28 @@ void finishingTimeGraph()
 }
 void CPUUtiGraph()
 {   
-    FILE * temp = fopen("cpu.temp", "w");
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
-    fprintf(temp,"FCFS %f\n",det_array[0][1]);
-    fprintf(temp,"RR %f\n",det_array[1][1]);
-    fprintf(temp,"UNI %f\n",det_array[2][1]);
-    fprintf(temp,"SJF %f\n",det_array[3][1]);
-    fprintf(temp,"LJF %f\n",det_array[4][1]);
-    fprintf(temp,"HRRN %f\n",det_array[5][1]);
-    fprintf(temp,"SRTN %f\n",det_array[6][1]);
+    FILE * cpuFilePointer = fopen("cpu.txt", "w");           // open cpu.txt to store cpu time of all processes
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w"); // opne gnu plot
+    /* Entering data in cpu.txt */
+    fprintf(cpuFilePointer,"FCFS %f\n",outputs_array[0][1]);
+    fprintf(cpuFilePointer,"RR %f\n",outputs_array[1][1]);
+    fprintf(cpuFilePointer,"UNI %f\n",outputs_array[2][1]);
+    fprintf(cpuFilePointer,"SJF %f\n",outputs_array[3][1]);
+    fprintf(cpuFilePointer,"LJF %f\n",outputs_array[4][1]);
+    fprintf(cpuFilePointer,"HRRN %f\n",outputs_array[5][1]);
+    fprintf(cpuFilePointer,"SRTN %f\n",outputs_array[6][1]);
+
+    /* commands for GNUPLOT */
+    /*
+    setting bar size
+    setting bar style to fill
+    setting title with custom fonts
+    removing legends
+    setting x axis with custom fonts
+    setting y axis with custom fonts
+    y axis starts from 0
+    ploting from cpu.txt having custom name store in column 1 and bar style 7
+    */
     char * commandsForGnuplot[] = 
     {"set boxwidth 0.5",
     "set style fill solid",
@@ -1394,7 +1470,8 @@ void CPUUtiGraph()
     "set ylabel 'CPU Uti' font \"Times-Roman,15\" ",
     "set xlabel 'Processes' font \"Times-Roman,15\"",
     "set yrange [0:]",
-    "plot 'cpu.temp' using 2:xtic(1) with boxes fs pattern 7"};
+    "plot 'cpu.txt' using 2:xtic(1) with boxes fs pattern 7"};
+    /* running all commands */
     for(int i=0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
@@ -1402,15 +1479,28 @@ void CPUUtiGraph()
 }
 void IOUtiGraph()
 {
-    FILE * temp = fopen("io.temp", "w");
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
-    fprintf(temp,"FCFS %f\n",det_array[0][2]);
-    fprintf(temp,"RR %f\n",det_array[1][2]);
-    fprintf(temp,"UNI %f\n",det_array[2][2]);
-    fprintf(temp,"SJF %f\n",det_array[3][2]);
-    fprintf(temp,"LJF %f\n",det_array[4][2]);
-    fprintf(temp,"HRRN %f\n",det_array[5][2]);
-    fprintf(temp,"SRTN %f\n",det_array[6][2]);
+    FILE * ioFilePointer = fopen("io.txt", "w");            // open io.rxt to store I/O Utilsation time of all processes
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");// open gnuplot
+    /* Entering data in io.txt */
+    fprintf(ioFilePointer,"FCFS %f\n",outputs_array[0][2]);
+    fprintf(ioFilePointer,"RR %f\n",outputs_array[1][2]);
+    fprintf(ioFilePointer,"UNI %f\n",outputs_array[2][2]);
+    fprintf(ioFilePointer,"SJF %f\n",outputs_array[3][2]);
+    fprintf(ioFilePointer,"LJF %f\n",outputs_array[4][2]);
+    fprintf(ioFilePointer,"HRRN %f\n",outputs_array[5][2]);
+    fprintf(ioFilePointer,"SRTN %f\n",outputs_array[6][2]);
+
+    /* commands for GNUPLOT */
+    /*
+    setting bar size
+    setting bar style to fill
+    setting title with custom fonts
+    removing legends
+    setting x axis with custom fonts
+    setting y axis with custom fonts
+    y axis starts from 0
+    ploting from io.txt having custom name store in column 1 and bar style 7
+    */
     char * commandsForGnuplot[] = 
     {"set boxwidth 0.5",
     "set style fill solid",
@@ -1419,7 +1509,8 @@ void IOUtiGraph()
     "set ylabel 'IO Uti' font \"Times-Roman,15\" ",
     "set xlabel 'Processes' font \"Times-Roman,15\"",
     "set yrange [0:]",
-    "plot 'io.temp' using 2:xtic(1) with boxes fs pattern 7"};
+    "plot 'io.txt' using 2:xtic(1) with boxes fs pattern 7"};
+    /* running all commands */
     for(int i=0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
@@ -1427,15 +1518,28 @@ void IOUtiGraph()
 }
 void throughputGraph()
 {
-    FILE * temp = fopen("thr.temp", "w");
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
-    fprintf(temp,"FCFS %f\n",det_array[0][3]);
-    fprintf(temp,"RR %f\n",det_array[1][3]);
-    fprintf(temp,"UNI %f\n",det_array[2][3]);
-    fprintf(temp,"SJF %f\n",det_array[3][3]);
-    fprintf(temp,"LJF %f\n",det_array[4][3]);
-    fprintf(temp,"HRRN %f\n",det_array[5][3]);
-    fprintf(temp,"SRTN %f\n",det_array[6][3]);
+    FILE * thrPutFilePointer = fopen("thr.txt", "w");       // open thr.txt to store throughput time of all processes
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");// oprn gnuplot
+    /* Entering data in thr.txt */
+    fprintf(thrPutFilePointer,"FCFS %f\n",outputs_array[0][3]);
+    fprintf(thrPutFilePointer,"RR %f\n",outputs_array[1][3]);
+    fprintf(thrPutFilePointer,"UNI %f\n",outputs_array[2][3]);
+    fprintf(thrPutFilePointer,"SJF %f\n",outputs_array[3][3]);
+    fprintf(thrPutFilePointer,"LJF %f\n",outputs_array[4][3]);
+    fprintf(thrPutFilePointer,"HRRN %f\n",outputs_array[5][3]);
+    fprintf(thrPutFilePointer,"SRTN %f\n",outputs_array[6][3]);
+
+    /* commands for GNUPLOT */
+    /*
+    setting bar size
+    setting bar style to fill
+    setting title with custom fonts
+    removing legends
+    setting x axis with custom fonts
+    setting y axis with custom fonts
+    y axis starts from 0
+    ploting from thr.txt having custom name store in column 1 and bar style 7
+    */
     char * commandsForGnuplot[] = 
     {"set boxwidth 0.5",
     "set style fill solid",
@@ -1444,7 +1548,8 @@ void throughputGraph()
     "set ylabel 'Throughput/100 cycles' font \"Times-Roman,15\" ",
     "set xlabel 'Processes' font \"Times-Roman,15\"",
     "set yrange [0:]",
-    "plot 'thr.temp' using 2:xtic(1) with boxes fs pattern 7"};
+    "plot 'thr.txt' using 2:xtic(1) with boxes fs pattern 7"};
+    /* running all commands */
     for(int i=0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
@@ -1452,15 +1557,28 @@ void throughputGraph()
 }
 void turnaroundTimeGraph() 
 {
-    FILE * temp = fopen("turn.temp", "w");
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
-    fprintf(temp,"FCFS %f\n",det_array[0][4]);
-    fprintf(temp,"RR %f\n",det_array[1][4]);
-    fprintf(temp,"UNI %f\n",det_array[2][4]);
-    fprintf(temp,"SJF %f\n",det_array[3][4]);
-    fprintf(temp,"LJF %f\n",det_array[4][4]);
-    fprintf(temp,"HRRN %f\n",det_array[5][4]);
-    fprintf(temp,"SRTN %f\n",det_array[6][4]);
+    FILE * turnAroundFilePointer = fopen("turn.txt", "w");  // open turn.txt to store turnaroud time of all processes
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");// open gnuplot
+    /* Entering data in turn.txt */
+    fprintf(turnAroundFilePointer,"FCFS %f\n",outputs_array[0][4]);
+    fprintf(turnAroundFilePointer,"RR %f\n",outputs_array[1][4]);
+    fprintf(turnAroundFilePointer,"UNI %f\n",outputs_array[2][4]);
+    fprintf(turnAroundFilePointer,"SJF %f\n",outputs_array[3][4]);
+    fprintf(turnAroundFilePointer,"LJF %f\n",outputs_array[4][4]);
+    fprintf(turnAroundFilePointer,"HRRN %f\n",outputs_array[5][4]);
+    fprintf(turnAroundFilePointer,"SRTN %f\n",outputs_array[6][4]);
+
+    /* commands for GNUPLOT */
+    /*
+    setting bar size
+    setting bar style to fill
+    setting title with custom fonts
+    removing legends
+    setting x axis with custom fonts
+    setting y axis with custom fonts
+    y axis starts from 0
+    ploting from turn.txt having custom name store in column 1 and bar style 7
+    */
     char * commandsForGnuplot[] = 
     {"set boxwidth 0.5",
     "set style fill solid",
@@ -1469,7 +1587,8 @@ void turnaroundTimeGraph()
     "set ylabel 'Time' font \"Times-Roman,15\" ",
     "set xlabel 'Processes' font \"Times-Roman,15\"",
     "set yrange [0:]",
-    "plot 'turn.temp' using 2:xtic(1) with boxes fs pattern 7"};
+    "plot 'turn.txt' using 2:xtic(1) with boxes fs pattern 7"};
+    /* running all commands */
     for(int i=0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
@@ -1477,15 +1596,28 @@ void turnaroundTimeGraph()
 }
 void waitingTimeGraph()
 {
-    FILE * temp = fopen("wait.temp", "w");
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
-    fprintf(temp,"FCFS %f\n",det_array[0][5]);
-    fprintf(temp,"RR %f\n",det_array[1][5]);
-    fprintf(temp,"UNI %f\n",det_array[2][5]);
-    fprintf(temp,"SJF %f\n",det_array[3][5]);
-    fprintf(temp,"LJF %f\n",det_array[4][5]);
-    fprintf(temp,"HRRN %f\n",det_array[5][5]);
-    fprintf(temp,"SRTN %f\n",det_array[6][5]);
+    FILE * waitingFilePointer = fopen("wait.txt", "w");     // open wait.txt to store waiting time of all processes
+    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");// open gnuplot
+    /* Entering data in wait.txt */
+    fprintf(waitingFilePointer,"FCFS %f\n",outputs_array[0][5]);
+    fprintf(waitingFilePointer,"RR %f\n",outputs_array[1][5]);
+    fprintf(waitingFilePointer,"UNI %f\n",outputs_array[2][5]);
+    fprintf(waitingFilePointer,"SJF %f\n",outputs_array[3][5]);
+    fprintf(waitingFilePointer,"LJF %f\n",outputs_array[4][5]);
+    fprintf(waitingFilePointer,"HRRN %f\n",outputs_array[5][5]);
+    fprintf(waitingFilePointer,"SRTN %f\n",outputs_array[6][5]);
+
+    /* commands for GNUPLOT */
+    /*
+    setting bar size
+    setting bar style to fill
+    setting title with custom fonts
+    removing legends
+    setting x axis with custom fonts
+    setting y axis with custom fonts
+    y axis starts from 0
+    ploting from wait.txt having custom name store in column 1 and bar style 7
+    */
     char * commandsForGnuplot[] = 
     {"set boxwidth 0.5",
     "set style fill solid",
@@ -1494,7 +1626,8 @@ void waitingTimeGraph()
     "set ylabel 'Time' font \"Times-Roman,15\" ",
     "set xlabel 'Processes' font \"Times-Roman,15\"",
     "set yrange [0:]",
-    "plot 'wait.temp' using 2:xtic(1) with boxes fs pattern 7"};
+    "plot 'wait.txt' using 2:xtic(1) with boxes fs pattern 7"};
+    /* running all commands */
     for(int i=0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
@@ -1502,25 +1635,7 @@ void waitingTimeGraph()
 }
 void plotGraphs()
 {
-    FILE * temp = fopen("data.temp", "w");
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
-    fprintf(temp,"temp FCFS RR UNI SJF LJF HRRN SRTN\n");
-    fprintf(temp,"FinishingTime %f %f %f %f %f %f %f\n",det_array[0][0],det_array[1][0],det_array[2][0],det_array[3][0],det_array[4][0],det_array[5][0],det_array[6][0]);
-    fprintf(temp,"AvgTurnaroundTime %f %f %f %f %f %f %f\n",det_array[0][4],det_array[1][4],det_array[2][4],det_array[3][4],det_array[4][4],det_array[5][4],det_array[6][4]);
-    fprintf(temp,"AvgWaitingTime %f %f %f %f %f %f %f\n",det_array[0][5],det_array[1][5],det_array[2][5],det_array[3][5],det_array[4][5],det_array[5][5],det_array[6][5]);
-    char * commandsForGnuplot[] = 
-    {"set title \"Comparsision between processes\" font \"Times-Roman,20\" ",
-    "set boxwidth 0.75",
-    "fontSpec(s) = sprintf(\"Times-Roman, %d\", s)",
-    "set style data histogram",
-    "set style fill solid",
-    "set style histogram clustered",
-    "set ylabel 'Time' font \"Times-Roman,15\" ",
-    "plot for [COL=2:8]'data.temp' using COL:xtic(1) title columnheader fs pattern 7"};
-    for(int i=0; i < 8; i++)
-    {
-        fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
-    }
+    comparisionGraph();
     finishingTimeGraph();
     CPUUtiGraph();
     IOUtiGraph();
@@ -1608,21 +1723,14 @@ int main(int argc, char *argv[])
     // Shortest Job First Run
     schedulerWrapper(processContainer, 3);
 
-    //:: Longest Job Next
+    // Longest Job Next
     schedulerWrapper(processContainer, 4);
 
-    //::HRRN
+    //HRRN
     schedulerWrapper(processContainer, 5);
 
-    //::Shortest Remainning Time Next
+    //Shortest Remainning Time Next
     schedulerWrapper(processContainer, 6);
-    /*
-        schedulerW(4,5,6) add karsu
-        HRRN
-        SRTN
-        priority
-        LRJN 
-    */
 
     plotGraphs();
     return EXIT_SUCCESS;
