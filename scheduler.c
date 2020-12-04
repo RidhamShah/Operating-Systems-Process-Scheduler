@@ -52,7 +52,7 @@ int _kbhit() {
 
 char buffer[1];             // store buffer character
 double outputs_array[7][6]; // stores the every outputs of every processes
-int oa_index=0;             // points the index of outputs_array
+int oa_index = 0;           // points the index of outputs_array
 /* Defines a job struct */
 struct Process
 {
@@ -87,6 +87,8 @@ bool IS_VERBOSE_MODE = false; // Flags whether the output should be detailed or 
 bool IS_RANDOM_MODE = false;  // Flags whether the output should include the random digit or not
 bool IS_FIRST_TIME_RUNNING_UNIPROGRAMMED = true;
 struct Process *UNIPROGRAMMED_PROCESS = NULL;
+
+bool IS_USER_INTERRUPT_MODE = false;
 
 fd_set set;        // For using Dynamic input
 struct timeval tv; // (kbhit doesnot work in linux, so finfing appropriate alternative)
@@ -555,14 +557,14 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                     newCPUBurst = readiedProcess->C - readiedProcess->currentCPUTimeRun;
                 readiedProcess->CPUBurst = newCPUBurst;
                 CURRENT_RUNNING_PROCESS = readiedProcess;
-            } // End of dealing with shortest job first
+            }                                 // End of dealing with shortest job first
             else if (schedulerAlgorithm == 4) // Code for running Longest Job Next (LJN)
             {
                 // Scheduler is Longest Job Next, meaning in highest remaining CPU time required
                 u_int32_t i = 0;
                 struct Process *currentReadyProcess = readyHead;
                 struct Process *longestJobProcess = readyHead;
-                for (; i < readyProcessQueueSize; ++i) 
+                for (; i < readyProcessQueueSize; ++i)
                 {
                     if ((longestJobProcess->C - longestJobProcess->currentCPUTimeRun) <
                         (currentReadyProcess->C - currentReadyProcess->currentCPUTimeRun))
@@ -631,10 +633,10 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                     newCPUBurst = readiedProcess->C - readiedProcess->currentCPUTimeRun;
                 readiedProcess->CPUBurst = newCPUBurst;
                 CURRENT_RUNNING_PROCESS = readiedProcess;
-            } 
+            }
             else if (schedulerAlgorithm == 5) // Code for Highest Response Ratio Next
             {
-                // HRRN 
+                // HRRN
                 // max[(w+s)/s] = max[w/s + 1] = max[w/s]
                 u_int32_t i = 0;
                 struct Process *currentReadyProcess = readyHead;
@@ -642,7 +644,7 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                 // PRINT CURRENTREADYPROCESS DETAILS
 
                 double ans;
-                for (; i < readyProcessQueueSize; ++i) 
+                for (; i < readyProcessQueueSize; ++i)
                 {
                     double w1 = (1.0 * (highestRatioProcess->currentWaitingTime)) / (highestRatioProcess->C - highestRatioProcess->currentCPUTimeRun); //temp w/s
                     double w2 = (1.0 * (currentReadyProcess->currentWaitingTime)) / (currentReadyProcess->C - currentReadyProcess->currentCPUTimeRun);
@@ -722,7 +724,7 @@ void doReadyProcesses(u_int8_t schedulerAlgorithm, u_int8_t currentPassNumber, F
                 u_int32_t i = 0;
                 struct Process *currentReadyProcess = readyHead;
                 struct Process *shortestRemainingProcess = readyHead;
-                for (; i < readyProcessQueueSize; ++i) 
+                for (; i < readyProcessQueueSize; ++i)
                 {
                     if ((shortestRemainingProcess->C - shortestRemainingProcess->currentCPUTimeRun) <
                         (currentReadyProcess->C - currentReadyProcess->currentCPUTimeRun))
@@ -932,9 +934,13 @@ u_int8_t setFlags(int32_t argc, char *argv[])
             IS_VERBOSE_MODE = true;
         if ((strcmp(argv[1], "--random") == 0) || (strcmp(argv[2], "--random") == 0))
             IS_RANDOM_MODE = true;
-        if ((strcmp(argv[1], "--random") != 0) && (strcmp(argv[1], "--verbose") != 0))
+        if ((strcmp(argv[1], "--userint") == 0) || (strcmp(argv[2], "--userint") == 0)){
+            IS_USER_INTERRUPT_MODE = true ;
+            IS_VERBOSE_MODE = true ;
+        }
+        if ((strcmp(argv[1], "--random") != 0) && (strcmp(argv[1], "--verbose") != 0) && (strcmp(argv[1], "--userint") != 0))
             return 1;
-        else if ((strcmp(argv[2], "--random") != 0) && (strcmp(argv[2], "--verbose") != 0))
+        else if ((strcmp(argv[2], "--random") != 0) && (strcmp(argv[2], "--verbose") != 0) && (strcmp(argv[2], "--userint") != 0))
             return 2;
         else
             return 3;
@@ -1041,12 +1047,12 @@ void printSummaryData(struct Process processContainer[])
     printf("\tAverage turnaround time: %6f\n", averageTurnaroundTime);
     printf("\tAverage waiting time: %6f\n", averageWaitingTime);
     /* storing every output in outputs_array */
-    outputs_array[oa_index][0]=CURRENT_CYCLE-1;
-    outputs_array[oa_index][1]=CPUUtilisation;
-    outputs_array[oa_index][2]=IOUtilisation;
-    outputs_array[oa_index][3]=throughput;
-    outputs_array[oa_index][4]=averageTurnaroundTime;
-    outputs_array[oa_index][5]=averageWaitingTime;
+    outputs_array[oa_index][0] = CURRENT_CYCLE - 1;
+    outputs_array[oa_index][1] = CPUUtilisation;
+    outputs_array[oa_index][2] = IOUtilisation;
+    outputs_array[oa_index][3] = throughput;
+    outputs_array[oa_index][4] = averageTurnaroundTime;
+    outputs_array[oa_index][5] = averageWaitingTime;
     oa_index++;
 } // End of the print summary data function
 
@@ -1105,23 +1111,32 @@ void resetAfterRun(struct Process processContainer[])
 
 void addDynamicProcess(struct Process processContainer[])
 {
-    srand(time(0));     //to create random number
+    srand(time(0)); //to create random number
     FILE *randomFilePointer;
 
     /* giving random parameter to process parameters */
-    u_int32_t currentInputA = (rand()%5 + 1);
-    u_int32_t currentInputB = (rand()%5 + 1);
-    u_int32_t currentInputC = (rand()%10 + 1);
-    u_int32_t currentInputM = (rand()%5 + 1);
+    u_int32_t currentInputA = (rand() % 5 + 1);
+    u_int32_t currentInputB = (rand() % 5 + 1);
+    u_int32_t currentInputC = (rand() % 10 + 1);
+    u_int32_t currentInputM = (rand() % 5 + 1);
 
     // Ain't C cool, that you can read in something like this that scans in the job
     randomFilePointer = fopen(RANDOM_NUMBER_FILE_NAME, "r");
 
     /* assigning every details of the new created process */
-    processContainer[TOTAL_CREATED_PROCESSES].A = 1 + CURRENT_CYCLE; //arr[i].F = x
-    processContainer[TOTAL_CREATED_PROCESSES].B = currentInputB;
-    processContainer[TOTAL_CREATED_PROCESSES].C = currentInputC;
-    processContainer[TOTAL_CREATED_PROCESSES].M = currentInputM;
+    if (!(IS_USER_INTERRUPT_MODE))
+    {
+        processContainer[TOTAL_CREATED_PROCESSES].A = 1 + CURRENT_CYCLE; //arr[i].F = x
+        processContainer[TOTAL_CREATED_PROCESSES].B = currentInputB;
+        processContainer[TOTAL_CREATED_PROCESSES].C = currentInputC;
+        processContainer[TOTAL_CREATED_PROCESSES].M = currentInputM;
+    }
+    else
+    {
+        printf("Enter the process parameters in format of A B C M\n");
+        scanf("%d %d %d %d", &processContainer[TOTAL_CREATED_PROCESSES].A, &processContainer[TOTAL_CREATED_PROCESSES].B, &processContainer[TOTAL_CREATED_PROCESSES].C, &processContainer[TOTAL_CREATED_PROCESSES].M);
+        processContainer[TOTAL_CREATED_PROCESSES].A = processContainer[TOTAL_CREATED_PROCESSES].A + CURRENT_CYCLE ;
+    }
 
     processContainer[TOTAL_CREATED_PROCESSES].processID = TOTAL_CREATED_PROCESSES;
     processContainer[TOTAL_CREATED_PROCESSES].status = 0;         //not started
@@ -1158,7 +1173,7 @@ void addDynamicProcess(struct Process processContainer[])
 void simulateScheduler(u_int8_t currentPassNumber, struct Process processContainer[],
                        struct Process finishedProcessContainer[], FILE *randomFile, u_int8_t algorithmScheduler)
 {
-    // for interrupt 
+    // for interrupt
     memset(&tv, 0, sizeof(tv));
     tcgetattr(0, &t);
     t.c_lflag &= ~ICANON;
@@ -1231,7 +1246,7 @@ void simulateScheduler(u_int8_t currentPassNumber, struct Process processContain
 
     ++CURRENT_CYCLE;
     /* Adding sleep of 0.1s to make clock of 0.1s */
-    //usleep(100000);
+    usleep(100000);
 } // End of the simulate round robin function
 
 /****************************** END OF THE SIMULATION FUNCTIONS **************************************/
@@ -1259,7 +1274,7 @@ void schedulerWrapper(struct Process processContainer[], u_int8_t algorithmSched
     case 3:
         printf("######################### START OF SHORTEST JOB FIRST #########################\n");
         break;
-    case 4: 
+    case 4:
         printf("######################### START OF LONGEST JOB FIRST ##########################\n");
         break;
     case 5:
@@ -1364,14 +1379,14 @@ void schedulerWrapper(struct Process processContainer[], u_int8_t algorithmSched
 /* Creating graph of comaprision between processes usign GNUPLOT */
 void comparisionGraph()
 {
-    FILE * dataFilePointer = fopen("data.txt", "w");         // open data.txt file to store all data
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w"); // open gnuplot to plot graph
+    FILE *dataFilePointer = fopen("data.txt", "w");        // open data.txt file to store all data
+    FILE *gnuplotPipe = popen("gnuplot -persistent", "w"); // open gnuplot to plot graph
 
     /* Entering data in data.txt */
-    fprintf(dataFilePointer,"temp FCFS RR UNI SJF LJF HRRN SRTN\n");
-    fprintf(dataFilePointer,"FinishingTime %f %f %f %f %f %f %f\n",outputs_array[0][0],outputs_array[1][0],outputs_array[2][0],outputs_array[3][0],outputs_array[4][0],outputs_array[5][0],outputs_array[6][0]);
-    fprintf(dataFilePointer,"AvgTurnaroundTime %f %f %f %f %f %f %f\n",outputs_array[0][4],outputs_array[1][4],outputs_array[2][4],outputs_array[3][4],outputs_array[4][4],outputs_array[5][4],outputs_array[6][4]);
-    fprintf(dataFilePointer,"AvgWaitingTime %f %f %f %f %f %f %f\n",outputs_array[0][5],outputs_array[1][5],outputs_array[2][5],outputs_array[3][5],outputs_array[4][5],outputs_array[5][5],outputs_array[6][5]);
+    fprintf(dataFilePointer, "temp FCFS RR UNI SJF LJF HRRN SRTN\n");
+    fprintf(dataFilePointer, "FinishingTime %f %f %f %f %f %f %f\n", outputs_array[0][0], outputs_array[1][0], outputs_array[2][0], outputs_array[3][0], outputs_array[4][0], outputs_array[5][0], outputs_array[6][0]);
+    fprintf(dataFilePointer, "AvgTurnaroundTime %f %f %f %f %f %f %f\n", outputs_array[0][4], outputs_array[1][4], outputs_array[2][4], outputs_array[3][4], outputs_array[4][4], outputs_array[5][4], outputs_array[6][4]);
+    fprintf(dataFilePointer, "AvgWaitingTime %f %f %f %f %f %f %f\n", outputs_array[0][5], outputs_array[1][5], outputs_array[2][5], outputs_array[3][5], outputs_array[4][5], outputs_array[5][5], outputs_array[6][5]);
 
     /* commands for GNUPLOT explaination */
     /*
@@ -1384,33 +1399,33 @@ void comparisionGraph()
     setting y-axis
     setting x-axis having histogram of 2-8 column from data.txt file having custom name store in col1 and having bargraph patter 7
     */
-    char * commandsForGnuplot[] = 
-    {"set title \"Comparsision between processes\" font \"Times-Roman,20\" ", 
-    "set boxwidth 0.75",
-    "fontSpec(s) = sprintf(\"Times-Roman, %d\", s)",
-    "set style data histogram",
-    "set style fill solid",
-    "set style histogram clustered",
-    "set ylabel 'Time' font \"Times-Roman,15\" ",
-    "plot for [COL=2:8]'data.txt' using COL:xtic(1) title columnheader fs pattern 7"};
+    char *commandsForGnuplot[] =
+        {"set title \"Comparsision between processes\" font \"Times-Roman,20\" ",
+         "set boxwidth 0.75",
+         "fontSpec(s) = sprintf(\"Times-Roman, %d\", s)",
+         "set style data histogram",
+         "set style fill solid",
+         "set style histogram clustered",
+         "set ylabel 'Time' font \"Times-Roman,15\" ",
+         "plot for [COL=2:8]'data.txt' using COL:xtic(1) title columnheader fs pattern 7"};
     /* running all commands */
-    for(int i=0; i < 8; i++)
+    for (int i = 0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
     }
 }
 void finishingTimeGraph()
 {
-    FILE * finishingFilePoiter = fopen("ft.txt", "w");       // open ft.txt to store finishing time of all scheduling algprithm
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w"); // open gnu plot
+    FILE *finishingFilePoiter = fopen("ft.txt", "w");      // open ft.txt to store finishing time of all scheduling algprithm
+    FILE *gnuplotPipe = popen("gnuplot -persistent", "w"); // open gnu plot
     /* Entering data in ft.txt */
-    fprintf(finishingFilePoiter,"FCFS %f\n",outputs_array[0][0]);
-    fprintf(finishingFilePoiter,"RR %f\n",outputs_array[1][0]);
-    fprintf(finishingFilePoiter,"UNI %f\n",outputs_array[2][0]);
-    fprintf(finishingFilePoiter,"SJF %f\n",outputs_array[3][0]);
-    fprintf(finishingFilePoiter,"LJF %f\n",outputs_array[4][0]);
-    fprintf(finishingFilePoiter,"HRRN %f\n",outputs_array[5][0]);
-    fprintf(finishingFilePoiter,"SRTN %f\n",outputs_array[6][0]);
+    fprintf(finishingFilePoiter, "FCFS %f\n", outputs_array[0][0]);
+    fprintf(finishingFilePoiter, "RR %f\n", outputs_array[1][0]);
+    fprintf(finishingFilePoiter, "UNI %f\n", outputs_array[2][0]);
+    fprintf(finishingFilePoiter, "SJF %f\n", outputs_array[3][0]);
+    fprintf(finishingFilePoiter, "LJF %f\n", outputs_array[4][0]);
+    fprintf(finishingFilePoiter, "HRRN %f\n", outputs_array[5][0]);
+    fprintf(finishingFilePoiter, "SRTN %f\n", outputs_array[6][0]);
 
     /* commands for GNUPLOT */
     /*
@@ -1423,33 +1438,33 @@ void finishingTimeGraph()
     y axis starts from 0
     ploting from ft.txt having custom name store in column 1 and bar style 7
     */
-    char * commandsForGnuplot[] = 
-    {"set boxwidth 0.5",
-    "set style fill solid",
-    "set title \"Finishing Time Comparision\" font \"Times-Roman,20\" ",
-    "unset key",
-    "set ylabel 'Time' font \"Times-Roman,15\" ",
-    "set xlabel 'Processes' font \"Times-Roman,15\"",
-    "set yrange [0:]",
-    "plot 'ft.txt' using 2:xtic(1) with boxes fs pattern 7"};
+    char *commandsForGnuplot[] =
+        {"set boxwidth 0.5",
+         "set style fill solid",
+         "set title \"Finishing Time Comparision\" font \"Times-Roman,20\" ",
+         "unset key",
+         "set ylabel 'Time' font \"Times-Roman,15\" ",
+         "set xlabel 'Processes' font \"Times-Roman,15\"",
+         "set yrange [0:]",
+         "plot 'ft.txt' using 2:xtic(1) with boxes fs pattern 7"};
     /* running all commands */
-    for(int i=0; i < 8; i++)
+    for (int i = 0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
     }
 }
 void CPUUtiGraph()
-{   
-    FILE * cpuFilePointer = fopen("cpu.txt", "w");           // open cpu.txt to store cpu time of all scheduling algorithm
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w"); // opne gnu plot
+{
+    FILE *cpuFilePointer = fopen("cpu.txt", "w");          // open cpu.txt to store cpu time of all scheduling algorithm
+    FILE *gnuplotPipe = popen("gnuplot -persistent", "w"); // opne gnu plot
     /* Entering data in cpu.txt */
-    fprintf(cpuFilePointer,"FCFS %f\n",outputs_array[0][1]);
-    fprintf(cpuFilePointer,"RR %f\n",outputs_array[1][1]);
-    fprintf(cpuFilePointer,"UNI %f\n",outputs_array[2][1]);
-    fprintf(cpuFilePointer,"SJF %f\n",outputs_array[3][1]);
-    fprintf(cpuFilePointer,"LJF %f\n",outputs_array[4][1]);
-    fprintf(cpuFilePointer,"HRRN %f\n",outputs_array[5][1]);
-    fprintf(cpuFilePointer,"SRTN %f\n",outputs_array[6][1]);
+    fprintf(cpuFilePointer, "FCFS %f\n", outputs_array[0][1]);
+    fprintf(cpuFilePointer, "RR %f\n", outputs_array[1][1]);
+    fprintf(cpuFilePointer, "UNI %f\n", outputs_array[2][1]);
+    fprintf(cpuFilePointer, "SJF %f\n", outputs_array[3][1]);
+    fprintf(cpuFilePointer, "LJF %f\n", outputs_array[4][1]);
+    fprintf(cpuFilePointer, "HRRN %f\n", outputs_array[5][1]);
+    fprintf(cpuFilePointer, "SRTN %f\n", outputs_array[6][1]);
 
     /* commands for GNUPLOT */
     /*
@@ -1462,33 +1477,33 @@ void CPUUtiGraph()
     y axis starts from 0
     ploting from cpu.txt having custom name store in column 1 and bar style 7
     */
-    char * commandsForGnuplot[] = 
-    {"set boxwidth 0.5",
-    "set style fill solid",
-    "set title \"CPU Utilisation Comparision\" font \"Times-Roman,20\" ",
-    "unset key",
-    "set ylabel 'CPU Uti' font \"Times-Roman,15\" ",
-    "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
-    "set yrange [0:]",
-    "plot 'cpu.txt' using 2:xtic(1) with boxes fs pattern 7"};
+    char *commandsForGnuplot[] =
+        {"set boxwidth 0.5",
+         "set style fill solid",
+         "set title \"CPU Utilisation Comparision\" font \"Times-Roman,20\" ",
+         "unset key",
+         "set ylabel 'CPU Uti' font \"Times-Roman,15\" ",
+         "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
+         "set yrange [0:]",
+         "plot 'cpu.txt' using 2:xtic(1) with boxes fs pattern 7"};
     /* running all commands */
-    for(int i=0; i < 8; i++)
+    for (int i = 0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
     }
 }
 void IOUtiGraph()
 {
-    FILE * ioFilePointer = fopen("io.txt", "w");            // open io.rxt to store I/O Utilsation time of all scheduling algorithm
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");// open gnuplot
+    FILE *ioFilePointer = fopen("io.txt", "w");            // open io.rxt to store I/O Utilsation time of all scheduling algorithm
+    FILE *gnuplotPipe = popen("gnuplot -persistent", "w"); // open gnuplot
     /* Entering data in io.txt */
-    fprintf(ioFilePointer,"FCFS %f\n",outputs_array[0][2]);
-    fprintf(ioFilePointer,"RR %f\n",outputs_array[1][2]);
-    fprintf(ioFilePointer,"UNI %f\n",outputs_array[2][2]);
-    fprintf(ioFilePointer,"SJF %f\n",outputs_array[3][2]);
-    fprintf(ioFilePointer,"LJF %f\n",outputs_array[4][2]);
-    fprintf(ioFilePointer,"HRRN %f\n",outputs_array[5][2]);
-    fprintf(ioFilePointer,"SRTN %f\n",outputs_array[6][2]);
+    fprintf(ioFilePointer, "FCFS %f\n", outputs_array[0][2]);
+    fprintf(ioFilePointer, "RR %f\n", outputs_array[1][2]);
+    fprintf(ioFilePointer, "UNI %f\n", outputs_array[2][2]);
+    fprintf(ioFilePointer, "SJF %f\n", outputs_array[3][2]);
+    fprintf(ioFilePointer, "LJF %f\n", outputs_array[4][2]);
+    fprintf(ioFilePointer, "HRRN %f\n", outputs_array[5][2]);
+    fprintf(ioFilePointer, "SRTN %f\n", outputs_array[6][2]);
 
     /* commands for GNUPLOT */
     /*
@@ -1501,33 +1516,33 @@ void IOUtiGraph()
     y axis starts from 0
     ploting from io.txt having custom name store in column 1 and bar style 7
     */
-    char * commandsForGnuplot[] = 
-    {"set boxwidth 0.5",
-    "set style fill solid",
-    "set title \"I/O Utilisation Comparision\" font \"Times-Roman,20\" ",
-    "unset key",
-    "set ylabel 'IO Uti' font \"Times-Roman,15\" ",
-    "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
-    "set yrange [0:]",
-    "plot 'io.txt' using 2:xtic(1) with boxes fs pattern 7"};
+    char *commandsForGnuplot[] =
+        {"set boxwidth 0.5",
+         "set style fill solid",
+         "set title \"I/O Utilisation Comparision\" font \"Times-Roman,20\" ",
+         "unset key",
+         "set ylabel 'IO Uti' font \"Times-Roman,15\" ",
+         "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
+         "set yrange [0:]",
+         "plot 'io.txt' using 2:xtic(1) with boxes fs pattern 7"};
     /* running all commands */
-    for(int i=0; i < 8; i++)
+    for (int i = 0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
     }
 }
 void throughputGraph()
 {
-    FILE * thrPutFilePointer = fopen("thr.txt", "w");       // open thr.txt to store throughput time of all scheduling algorithms
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");// oprn gnuplot
+    FILE *thrPutFilePointer = fopen("thr.txt", "w");       // open thr.txt to store throughput time of all scheduling algorithms
+    FILE *gnuplotPipe = popen("gnuplot -persistent", "w"); // oprn gnuplot
     /* Entering data in thr.txt */
-    fprintf(thrPutFilePointer,"FCFS %f\n",outputs_array[0][3]);
-    fprintf(thrPutFilePointer,"RR %f\n",outputs_array[1][3]);
-    fprintf(thrPutFilePointer,"UNI %f\n",outputs_array[2][3]);
-    fprintf(thrPutFilePointer,"SJF %f\n",outputs_array[3][3]);
-    fprintf(thrPutFilePointer,"LJF %f\n",outputs_array[4][3]);
-    fprintf(thrPutFilePointer,"HRRN %f\n",outputs_array[5][3]);
-    fprintf(thrPutFilePointer,"SRTN %f\n",outputs_array[6][3]);
+    fprintf(thrPutFilePointer, "FCFS %f\n", outputs_array[0][3]);
+    fprintf(thrPutFilePointer, "RR %f\n", outputs_array[1][3]);
+    fprintf(thrPutFilePointer, "UNI %f\n", outputs_array[2][3]);
+    fprintf(thrPutFilePointer, "SJF %f\n", outputs_array[3][3]);
+    fprintf(thrPutFilePointer, "LJF %f\n", outputs_array[4][3]);
+    fprintf(thrPutFilePointer, "HRRN %f\n", outputs_array[5][3]);
+    fprintf(thrPutFilePointer, "SRTN %f\n", outputs_array[6][3]);
 
     /* commands for GNUPLOT */
     /*
@@ -1540,33 +1555,33 @@ void throughputGraph()
     y axis starts from 0
     ploting from thr.txt having custom name store in column 1 and bar style 7
     */
-    char * commandsForGnuplot[] = 
-    {"set boxwidth 0.5",
-    "set style fill solid",
-    "set title \"Throughput Comparision\" font \"Times-Roman,20\" ",
-    "unset key",
-    "set ylabel 'Throughput/100 cycles' font \"Times-Roman,15\" ",
-    "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
-    "set yrange [0:]",
-    "plot 'thr.txt' using 2:xtic(1) with boxes fs pattern 7"};
+    char *commandsForGnuplot[] =
+        {"set boxwidth 0.5",
+         "set style fill solid",
+         "set title \"Throughput Comparision\" font \"Times-Roman,20\" ",
+         "unset key",
+         "set ylabel 'Throughput/100 cycles' font \"Times-Roman,15\" ",
+         "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
+         "set yrange [0:]",
+         "plot 'thr.txt' using 2:xtic(1) with boxes fs pattern 7"};
     /* running all commands */
-    for(int i=0; i < 8; i++)
+    for (int i = 0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
     }
 }
-void turnaroundTimeGraph() 
+void turnaroundTimeGraph()
 {
-    FILE * turnAroundFilePointer = fopen("turn.txt", "w");  // open turn.txt to store turnaroud time of all scheduling process
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");// open gnuplot
+    FILE *turnAroundFilePointer = fopen("turn.txt", "w");  // open turn.txt to store turnaroud time of all scheduling process
+    FILE *gnuplotPipe = popen("gnuplot -persistent", "w"); // open gnuplot
     /* Entering data in turn.txt */
-    fprintf(turnAroundFilePointer,"FCFS %f\n",outputs_array[0][4]);
-    fprintf(turnAroundFilePointer,"RR %f\n",outputs_array[1][4]);
-    fprintf(turnAroundFilePointer,"UNI %f\n",outputs_array[2][4]);
-    fprintf(turnAroundFilePointer,"SJF %f\n",outputs_array[3][4]);
-    fprintf(turnAroundFilePointer,"LJF %f\n",outputs_array[4][4]);
-    fprintf(turnAroundFilePointer,"HRRN %f\n",outputs_array[5][4]);
-    fprintf(turnAroundFilePointer,"SRTN %f\n",outputs_array[6][4]);
+    fprintf(turnAroundFilePointer, "FCFS %f\n", outputs_array[0][4]);
+    fprintf(turnAroundFilePointer, "RR %f\n", outputs_array[1][4]);
+    fprintf(turnAroundFilePointer, "UNI %f\n", outputs_array[2][4]);
+    fprintf(turnAroundFilePointer, "SJF %f\n", outputs_array[3][4]);
+    fprintf(turnAroundFilePointer, "LJF %f\n", outputs_array[4][4]);
+    fprintf(turnAroundFilePointer, "HRRN %f\n", outputs_array[5][4]);
+    fprintf(turnAroundFilePointer, "SRTN %f\n", outputs_array[6][4]);
 
     /* commands for GNUPLOT */
     /*
@@ -1579,33 +1594,33 @@ void turnaroundTimeGraph()
     y axis starts from 0
     ploting from turn.txt having custom name store in column 1 and bar style 7
     */
-    char * commandsForGnuplot[] = 
-    {"set boxwidth 0.5",
-    "set style fill solid",
-    "set title \"Average Turnaround time Comparision\" font \"Times-Roman,20\" ",
-    "unset key",
-    "set ylabel 'Time' font \"Times-Roman,15\" ",
-    "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
-    "set yrange [0:]",
-    "plot 'turn.txt' using 2:xtic(1) with boxes fs pattern 7"};
+    char *commandsForGnuplot[] =
+        {"set boxwidth 0.5",
+         "set style fill solid",
+         "set title \"Average Turnaround time Comparision\" font \"Times-Roman,20\" ",
+         "unset key",
+         "set ylabel 'Time' font \"Times-Roman,15\" ",
+         "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
+         "set yrange [0:]",
+         "plot 'turn.txt' using 2:xtic(1) with boxes fs pattern 7"};
     /* running all commands */
-    for(int i=0; i < 8; i++)
+    for (int i = 0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
     }
 }
 void waitingTimeGraph()
 {
-    FILE * waitingFilePointer = fopen("wait.txt", "w");     // open wait.txt to store waiting time of all scheduling algporithm
-    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");// open gnuplot
+    FILE *waitingFilePointer = fopen("wait.txt", "w");     // open wait.txt to store waiting time of all scheduling algporithm
+    FILE *gnuplotPipe = popen("gnuplot -persistent", "w"); // open gnuplot
     /* Entering data in wait.txt */
-    fprintf(waitingFilePointer,"FCFS %f\n",outputs_array[0][5]);
-    fprintf(waitingFilePointer,"RR %f\n",outputs_array[1][5]);
-    fprintf(waitingFilePointer,"UNI %f\n",outputs_array[2][5]);
-    fprintf(waitingFilePointer,"SJF %f\n",outputs_array[3][5]);
-    fprintf(waitingFilePointer,"LJF %f\n",outputs_array[4][5]);
-    fprintf(waitingFilePointer,"HRRN %f\n",outputs_array[5][5]);
-    fprintf(waitingFilePointer,"SRTN %f\n",outputs_array[6][5]);
+    fprintf(waitingFilePointer, "FCFS %f\n", outputs_array[0][5]);
+    fprintf(waitingFilePointer, "RR %f\n", outputs_array[1][5]);
+    fprintf(waitingFilePointer, "UNI %f\n", outputs_array[2][5]);
+    fprintf(waitingFilePointer, "SJF %f\n", outputs_array[3][5]);
+    fprintf(waitingFilePointer, "LJF %f\n", outputs_array[4][5]);
+    fprintf(waitingFilePointer, "HRRN %f\n", outputs_array[5][5]);
+    fprintf(waitingFilePointer, "SRTN %f\n", outputs_array[6][5]);
 
     /* commands for GNUPLOT */
     /*
@@ -1618,17 +1633,17 @@ void waitingTimeGraph()
     y axis starts from 0
     ploting from wait.txt having custom name store in column 1 and bar style 7
     */
-    char * commandsForGnuplot[] = 
-    {"set boxwidth 0.5",
-    "set style fill solid",
-    "set title \"Average waiting time Comparision\" font \"Times-Roman,20\" ",
-    "unset key",
-    "set ylabel 'Time' font \"Times-Roman,15\" ",
-    "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
-    "set yrange [0:]",
-    "plot 'wait.txt' using 2:xtic(1) with boxes fs pattern 7"};
+    char *commandsForGnuplot[] =
+        {"set boxwidth 0.5",
+         "set style fill solid",
+         "set title \"Average waiting time Comparision\" font \"Times-Roman,20\" ",
+         "unset key",
+         "set ylabel 'Time' font \"Times-Roman,15\" ",
+         "set xlabel 'Scheduling Algorithms' font \"Times-Roman,15\"",
+         "set yrange [0:]",
+         "plot 'wait.txt' using 2:xtic(1) with boxes fs pattern 7"};
     /* running all commands */
-    for(int i=0; i < 8; i++)
+    for (int i = 0; i < 8; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
     }
